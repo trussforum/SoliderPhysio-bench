@@ -8,7 +8,7 @@
     "deploy": "next build && CLOUDFLARE_ACCOUNT_ID=bddd50b774c77c8bc7c31bf50bb30c33 wrangler pages deploy out --project-name soliderphys-bench --branch main"
   },
   "dependencies": {
-    "next": "15.5.4",
+    "next": "^15.5.29",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },

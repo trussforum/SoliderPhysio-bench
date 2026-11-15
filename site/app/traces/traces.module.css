@@ -2,7 +2,7 @@
 .intro {margin-bottom:20px;}
 .back {font-size:15px;color:#57534E;text-decoration:none;}
 .intro h1 {font-size:40px;font-weight:400;line-height:1.15;letter-spacing:-.01em;margin:14px 0 8px;}
-.intro p {color:#57534E;max-width:680px;margin:0;font-size:18px;}
+.intro p {color:#57534E;max-width:none;margin:0;font-size:18px;}
 
 .toolbar {display:flex;align-items:flex-end;gap:18px;padding:0 0 18px;border-bottom:1px solid #E7E5E4;margin-bottom:24px;flex-wrap:wrap;}
 .toolbar label {display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#57534E;flex:1 1 160px;}

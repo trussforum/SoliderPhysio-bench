@@ -6,11 +6,10 @@ const ITEMS = [
   { id: "intro", label: "Introduction" },
   { id: "leaderboard", label: "Results" },
   { id: "cost", label: "Cost" },
-  { id: "findings", label: "Key findings" },
   { id: "methodology", label: "Methodology" },
   { id: "tasks", label: "Tasks" },
   { id: "scoring", label: "Scoring" },
-  { id: "limits", label: "Limits" },
+  { id: "findings", label: "Key findings" },
 ];
 
 // Vertical contents rail with scroll-spy: sections already passed fade out,

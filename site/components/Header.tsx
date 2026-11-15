@@ -9,8 +9,8 @@ export function Header() {
         </a>
         <nav className="nav" aria-label="Main">
           <a href="/#leaderboard">Results</a>
-          <a href="/#findings">Key findings</a>
           <a href="/#methodology">Methodology</a>
+          <a href="/#findings">Key findings</a>
           <a href="/traces/">Traces</a>
         </nav>
       </div>

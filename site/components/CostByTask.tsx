@@ -4,7 +4,8 @@ import { Plot } from "@/components/Plot";
 
 // limit: show only the N most expensive models; omit to show all
 export function CostByTask({ limit }: { limit?: number }) {
-  const max = 30;
+  // scale to the most expensive model's task total so bars never overflow
+  const max = Math.max(...data.models.map((m) => m.cost_tasks.keep_going + m.cost_tasks.rulebook + m.cost_tasks.research));
   const rows = [...data.models].sort((a, b) => b.cost - a.cost).slice(0, limit);
   return (
     <Plot>

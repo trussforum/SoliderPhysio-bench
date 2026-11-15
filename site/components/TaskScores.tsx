@@ -27,13 +27,50 @@ const best = {
   cost: Math.min(...rows.map((r) => r.cost)),
 };
 
-const Num = ({ isBest, children }: { isBest: boolean; children: React.ReactNode }) =>
-  isBest ? <td className="num"><strong>{children}</strong></td> : <td className="num">{children}</td>;
+type HeatCol = "index" | "keep" | "rulebook" | "research";
+
+const colRange = (k: HeatCol | "cost") => {
+  const vals = rows.map((r) => r[k]);
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+};
+
+/** 0 = column worst, 1 = column best (cost uses inverted scale). */
+const heatStrength = (k: HeatCol | "cost", value: number) => {
+  const { min, max } = colRange(k);
+  if (max <= min) return 1;
+  const t = (value - min) / (max - min);
+  return k === "cost" ? 1 - t : t;
+};
+
+/** Light amber tile. Capped so the number stays dark ink on every cell. */
+const heatBg = (strength: number) => {
+  const a = 0.07 + strength * 0.34;
+  return `rgba(180, 83, 9, ${a.toFixed(3)})`;
+};
+
+const Num = ({
+  isBest,
+  heat,
+  children,
+}: {
+  isBest: boolean;
+  heat?: number;
+  children: React.ReactNode;
+}) => (
+  <td className="num">
+    <span
+      className={heat !== undefined ? `heat-cell${isBest ? " is-best" : ""}` : `heat-plain${isBest ? " is-best" : ""}`}
+      style={heat !== undefined ? { backgroundColor: heatBg(heat) } : undefined}
+    >
+      {children}
+    </span>
+  </td>
+);
 
 export function TaskScores() {
   return (
     <Plot>
-    <table className="dt">
+    <table className="dt dt-heat">
       <thead>
         <tr>
           <th>Model</th>
@@ -52,13 +89,23 @@ export function TaskScores() {
             <td>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Mark provider={r.m.provider} />{r.m.name}</span>
             </td>
-            <Num isBest={r.index === best.index}>{r.index.toFixed(3)}</Num>
-            <Num isBest={r.keep === best.keep}>{r.keep.toFixed(2)}</Num>
-            <Num isBest={r.rulebook === best.rulebook}>{r.rulebook.toFixed(2)}</Num>
-            <Num isBest={r.research === best.research}>{r.research.toFixed(2)}</Num>
+            <Num isBest={r.index === best.index} heat={heatStrength("index", r.index)}>
+              {r.index.toFixed(3)}
+            </Num>
+            <Num isBest={r.keep === best.keep} heat={heatStrength("keep", r.keep)}>
+              {r.keep.toFixed(2)}
+            </Num>
+            <Num isBest={r.rulebook === best.rulebook} heat={heatStrength("rulebook", r.rulebook)}>
+              {r.rulebook.toFixed(2)}
+            </Num>
+            <Num isBest={r.research === best.research} heat={heatStrength("research", r.research)}>
+              {r.research.toFixed(2)}
+            </Num>
             <Num isBest={r.calls === best.calls}>{`${r.calls}/12`}</Num>
             <Num isBest={r.cells === best.cells}>{`${r.cells}/8`}</Num>
-            <Num isBest={r.cost === best.cost}>{`$${r.cost.toFixed(2)}`}</Num>
+            <Num isBest={r.cost === best.cost} heat={heatStrength("cost", r.cost)}>
+              {`$${r.cost.toFixed(2)}`}
+            </Num>
           </tr>
         ))}
       </tbody>

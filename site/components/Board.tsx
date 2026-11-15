@@ -21,7 +21,6 @@ export function Board() {
   return (
     <>
       <div className="block-head">
-        <h2>Leaderboard</h2>
         <div className="tabs" role="tablist" aria-label="Score">
           {METRICS.map((m) => (
             <button key={m.key} role="tab" aria-selected={k === m.key} onClick={() => setK(m.key)}>{m.label}</button>
@@ -51,8 +50,8 @@ export function Board() {
       </table>
       </Plot>
       <p className="note">
-        One trial per case, run {data.run}. Overall is the mean of the three task scores. Cost is provider-reported USD for all
-        21 cases. Fable 5 and Opus 5.5 score 0 on the rulebook after content-filter refusals.
+        Overall is the mean of the three task scores. Cost is provider-reported USD for all
+        21 cases. 
       </p>
     </>
   );

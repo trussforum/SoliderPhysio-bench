@@ -17,9 +17,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SoldierPhysio · Evaluating frontier models on a field medic's heat-casualty calls",
+  title: "SoldierPhysio",
   description:
-    "14 frontier models make a field medic's heat-casualty calls on real heat-chamber data, graded against measured core temperature.",
+    "15 frontier models make a field medic's heat-casualty calls on real heat-chamber data, graded against measured core temperature.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
         <footer className="site-footer">
           <div className="wrap">
-            <span>SoldierPhysio · micro1 Eval Hackathon · November 2026</span>
+            <span>SoldierPhysio · Nikhil Prabhu</span>
             <span>Data: D&apos;Lugos et al. 2025 (CC BY 4.0) · TB MED 507 (2022)</span>
           </div>
         </footer>

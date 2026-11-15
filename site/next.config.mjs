@@ -9,6 +9,9 @@ const nextConfig = {
   trailingSlash: true,
   images: { unoptimized: true },
   outputFileTracingRoot: __dirname,
+  // Next 15.5's segment explorer corrupts the webpack dev cache
+  // (missing chunks such as ./611.js, then a client-manifest crash).
+  experimental: { devtoolSegmentExplorer: false },
 };
 
 export default nextConfig;
