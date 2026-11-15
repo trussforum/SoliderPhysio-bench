@@ -340,5 +340,20 @@ class FrozenParams(unittest.TestCase):
         self.assertAlmostEqual(comp['forecast'], 0.5)
 
 
+
+
+class JudgeOffRoster(unittest.TestCase):
+    def test_current_judge_is_off_roster(self):
+        cs.check_judge_model(cs.JUDGE_MODEL)
+
+    def test_rejects_rated_model_and_same_lab_sibling(self):
+        with self.assertRaises(ValueError):
+            cs.check_judge_model('openai/gpt-6.1-sol')
+        with self.assertRaises(ValueError):
+            cs.check_judge_model('openai/gpt-6.1-sol-pro')
+        with self.assertRaises(ValueError):
+            cs.check_judge_model('z-ai/glm-5.3-flash', rated=['z-ai/glm-5.3'])
+
+
 if __name__ == '__main__':
     unittest.main()

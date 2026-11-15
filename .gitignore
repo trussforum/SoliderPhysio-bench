@@ -27,3 +27,8 @@ site/.next/
 site/out/
 site/.wrangler/
 site/*.tsbuildinfo
+
+# Local tooling output
+.pytest_cache/
+.playwright-mcp/
+*.log

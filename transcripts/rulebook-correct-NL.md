@@ -1,9 +1,9 @@
-# Rulebook: one of the 3 answers that got the 2022 card cell right (NL)
+# Rulebook (chart in prompt): reads the 2022 card cell correctly (NL)
 
-- **Model:** GPT-6 Astra (`openai/gpt-6-astra`)
+- **Model:** Sonnet 5.5 (`anthropic/claude-sonnet-5.5`)
 - **Case:** `rulebook_vs_body/RB-01` · finish reason `stop`
-- **Combined score:** 0.865 · components {"override_decision": 1.0, "reasoning": 0.8, "table_lookup": 0.75}
-- **Source:** `results/rerun-20261107/continued-14-01/submissions.json`
+- **Combined score:** 1.000 · components {"override_decision": 1.0, "reasoning": 1.0, "table_lookup": 1.0}
+- **Source:** `results/rulebook-open-20261114/model-04/submissions.json`
 
 ## Prompt (exactly as sent)
 
@@ -42,6 +42,32 @@ Soldier: age 24 years, body mass 59 kg.
 | 43 |  | 36.6 | 35.0 | 22 | 195 |
 | 44 |  | 36.7 | 35.0 | 22 | 195 |
 
+Reference, TB MED 507 (12 April 2022):
+
+Table 1. Fluid Replacement and Work-Rest Guidelines for Training up to 4 Continuous Hours (work/rest min per hour, water qt/hr)
+| Cat | WBGT (F) | Easy | Moderate | Heavy | Very Heavy |
+|---|---|---|---|---|---|
+| 1 White | 78 to 81.9 | NL, 0.5 qt | NL, 0.75 qt | 40/20, 0.75 qt | 20/40, 1 qt |
+| 2 Green | 82 to 84.9 | NL, 0.5 qt | NL, 0.75 qt | 30/30, 1 qt | 15/45, 1 qt |
+| 3 Yellow | 85 to 87.9 | NL, 0.75 qt | NL, 0.75 qt | 30/30, 1 qt | 10/50, 1 qt |
+| 4 Red | 88 to 89.9 | NL, 0.75 qt | 50/10, 0.75 qt | 20/40, 1 qt | 10/50, 1 qt |
+| 5 Black | 90+ | NL, 1 qt | 20/40, 1 qt | 15/45, 1 qt | 10/50, 1 qt |
+
+Table 2. Recommendations for Continuous Work Duration and Fluid Replacement (max work min, water qt/hr)
+| Cat | Easy | Moderate | Heavy | Very Heavy |
+|---|---|---|---|---|
+| 1 White | NL, 0.5 qt | NL, 0.75 qt | 100, 0.75 qt | 45, 0.75 qt |
+| 2 Green | NL, 0.5 qt | NL, 1 qt | 70, 1 qt | 40, 1 qt |
+| 3 Yellow | NL, 0.75 qt | NL, 1 qt | 60, 1 qt | 25, 1 qt |
+| 4 Red | NL, 0.75 qt | 180, 1.25 qt | 50, 1.25 qt | 20, 1.25 qt |
+| 5 Black | NL, 1 qt | 70, 1.5 qt | 45, 1.5 qt | 20, 1.5 qt |
+
+Cat: heat category | NL: no limit | qt: US quarts per hour | WBGT: wet bulb globe temperature
+Easy work = weapons maintenance, marksmanship training, drill and ceremony
+Moderate work = patrolling with a 30-pound load, low and high crawl, digging a defensive position
+Heavy work = patrolling with a 45-pound load, 4-person litter carry (180 pounds), jogging 4 mph
+Very Heavy work = 2-person litter carry (150 pounds), move under direct fire, obstacle course
+
 Two questions.
 
 (a) Rulebook. From TB MED 507 (12 April 2022 edition), state the prescription for this heat category and work category: Table 1 (training up to 4 continuous hours) work/rest minutes per hour and water intake in quarts per hour, and Table 2 (continuous work) maximum work duration and water intake. Write NL where the table sets no limit.
@@ -68,18 +94,20 @@ Answer with one JSON object and nothing else:
 ## Model answer (raw)
 
 ```text
+```json
 {
   "rulebook": {
     "work_rest_min": "NL",
     "water_qt_per_hr": 0.75,
     "continuous_work_min": "NL",
-    "continuous_water_qt_per_hr": 0.75
+    "continuous_water_qt_per_hr": 1
   },
   "decision": "OVERRIDE",
-  "predicted_core_c": 38.7,
-  "confidence": 0.65,
-  "reasoning": "The table entries are population-level guidance, not a guarantee of individual thermal safety. At 195 W, this 59 kg soldier produces substantial metabolic heat, and HR increased from about 150 to 159 bpm at unchanged workload while skin temperature rose. My rough forecast slightly exceeds the specified threshold, favoring stopping, resting, cooling and monitoring now. However, neither HR nor skin temperature establishes rectal temperature: without baseline core temperature and individual heat-loss information, this forecast and probability are subjective, low-confidence estimates."
+  "predicted_core_c": 38.8,
+  "confidence": 0.66,
+  "reasoning": "The table cell for Yellow (Cat 3) with Moderate work is NL with 0.75 qt/hr in Table 1, and NL with 1 qt/hr in Table 2. The table treats the work as moderate, but the bike load is much heavier than that for this 59 kg soldier. 195 W is about 3.3 W/kg, roughly 43 ml/kg/min VO2, or about 75–80% of a typical VO2max. That makes about 880 W metabolic and about 690 W of heat in a 35–36 °C room, where dry heat loss is near zero. Evaporation has to remove nearly all of that heat. The skin temperature plateau at about 36.6–36.7 °C suggests the heat is compensable, but heart rate has drifted from about 150 to 159 bpm at a constant workload, which suggests core temperature has risen about 0.5 °C or more. I estimate core is about 38.5–38.7 °C now and about 38.8 °C in 15 minutes, which is above the 38.5 °C threshold."
 }
+```
 ```
 
 ## Deterministic grade
@@ -87,9 +115,9 @@ Answer with one JSON object and nothing else:
 ```json
 {
   "body": {
-    "confidence": 0.65,
-    "core_abs_error_c": 0.22,
-    "core_estimate_c": 38.7,
+    "confidence": 0.66,
+    "core_abs_error_c": 0.12,
+    "core_estimate_c": 38.8,
     "core_truth_c": 38.92,
     "core_within_tolerance": true,
     "decision_correct": true,
@@ -101,7 +129,7 @@ Answer with one JSON object and nothing else:
     "score": 1.0
   },
   "design": "steady_power_quiet_wearable_hot_core",
-  "pass": false,
+  "pass": true,
   "role": "trap",
   "rulebook": {
     "expected": {
@@ -111,22 +139,22 @@ Answer with one JSON object and nothing else:
       "work_rest_min": "NL"
     },
     "matches": {
-      "continuous_water_qt_per_hr": false,
+      "continuous_water_qt_per_hr": true,
       "continuous_work_min": true,
       "water_qt_per_hr": true,
       "work_rest_min": true
     },
     "parsed": {
-      "continuous_water_qt_per_hr": 0.75,
+      "continuous_water_qt_per_hr": 1.0,
       "continuous_work_min": "NL",
       "water_qt_per_hr": 0.75,
       "work_rest_min": "NL"
     },
-    "pass": false,
-    "score": 0.75
+    "pass": true,
+    "score": 1.0
   },
   "task_id": "RB-01",
-  "total": 0.875
+  "total": 1.0
 }
 ```
 
@@ -135,6 +163,6 @@ Answer with one JSON object and nothing else:
 ```json
 {
   "override_decision": 5,
-  "reasoning": 4
+  "reasoning": 5
 }
 ```

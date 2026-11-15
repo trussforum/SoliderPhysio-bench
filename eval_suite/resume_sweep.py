@@ -11,7 +11,7 @@ from eval_suite.core.common import read, write
 from eval_suite.runner import select_cases
 
 CAPS = {2:35, 3:15, 4:35, 5:45, 6:10, 7:25, 8:25, 9:35,
-        10:70, 11:50, 12:50, 13:35, 14:70, 15:70}
+        10:70, 11:50, 12:50, 13:35, 14:70, 15:70, 16:35}
 
 
 def inventory(root, row):
@@ -38,7 +38,7 @@ def main():
     args = ap.parse_args()
     ranks = tuple(sorted({int(x) for x in args.ranks.split(',')})) if args.ranks else None
     if ranks is not None and (not ranks or any(x not in CAPS for x in ranks)):
-        ap.error('--ranks must contain available roster slots 2 through 15')
+        ap.error('--ranks must contain available roster slots 2 through 16')
     args.root = args.root.resolve()
     control = args.root/'control'
     if ranks is not None:

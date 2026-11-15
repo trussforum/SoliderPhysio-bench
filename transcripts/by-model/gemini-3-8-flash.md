@@ -2,7 +2,7 @@
 
 - **Model:** Gemini 3.8 Flash (`google/gemini-3.8-flash`)
 - **Case:** `keep_going/KG-02` · finish reason `stop`
-- **Combined score:** 0.200 · components {"decision": 0.2, "reasoning": 0.4, "forecast": 0.0}
+- **Combined score:** 0.140 · components {"decision": 0.2, "reasoning": 0.2, "forecast": 0.0}
 - **Source:** `results/rerun-20261107/model-07-gemini-38/submissions.json`
 
 ## Prompt (exactly as sent)
@@ -91,6 +91,6 @@ Answer with one JSON object and nothing else:
 ```json
 {
   "decision": 1,
-  "reasoning": 2
+  "reasoning": 1
 }
 ```

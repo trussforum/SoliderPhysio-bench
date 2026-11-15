@@ -22,8 +22,9 @@ Rules implemented here (from the rubric doc):
   without calling the judge.
 - Every attempt keeps judge model, settings, prompt hash and raw output.
 
-The real judge is openai/gpt-6.1-sol via OpenRouter ($2/M input, $10/M output),
-with high reasoning effort and an 8192-token output ceiling. Temperature is
+The real judge is z-ai/glm-5.3-prime (Zhipu GLM-5.3 Prime) via OpenRouter ($2.80/M input,
+$8.80/M output). No model from its lab is on the rated roster. It runs
+with high reasoning effort, JSON mode and an 8192-token output ceiling. Temperature is
 omitted: the OpenRouter model catalog does not advertise support for it.
 FakeJudgeClient is the offline client. Real calls require a persistent SpendLedger;
 only HTTP 429/5xx failures are retried, with a reservation for every attempt.
@@ -56,7 +57,7 @@ from pathlib import Path
 
 from eval_suite.core.common import digest, file_hash
 from eval_suite.core.spend import SpendLedger, SpendLimitReached
-from tasks.combined_score import JUDGED, check_judge_model
+from tasks.combined_score import JUDGED, JUDGE_MODEL, check_judge_model
 
 ROOT = Path(__file__).resolve().parent.parent
 RUBRIC_PATH = ROOT / 'docs' / 'LLM_JUDGE_RUBRICS.md'
@@ -108,9 +109,9 @@ class OpenRouterJudgeError(RuntimeError):
 class OpenRouterJudgeClient(JudgeClient):
     """One urllib request per complete(); judge() budgets and audits each retry."""
 
-    model = 'openai/gpt-6.1-sol'
+    model = JUDGE_MODEL
     endpoint = 'https://openrouter.ai/api/v1/chat/completions'
-    pricing = {'prompt': '0.000002', 'completion': '0.000010'}  # USD per token
+    pricing = {'prompt': '0.0000028', 'completion': '0.0000088'}  # USD per token
 
     def __init__(self, api_key=None, *, timeout=120):
         check_judge_model(self.model)

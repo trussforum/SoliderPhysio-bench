@@ -9,6 +9,7 @@ mutate artifacts, or change scoring.
 from __future__ import annotations
 
 import argparse
+import os
 import hashlib
 import json
 from collections import Counter, defaultdict
@@ -181,7 +182,8 @@ def representative_failures(case_index, roster_by_id, sc_by):
 
 
 def abs_link(rel: str) -> str:
-    return str((Path.cwd() / rel).resolve())
+    # Repo-relative link from docs/results/, so the report never embeds a local machine path.
+    return os.path.relpath(rel, 'docs/results')
 
 
 def render_md(payload):

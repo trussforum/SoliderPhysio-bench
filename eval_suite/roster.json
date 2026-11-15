@@ -3,7 +3,7 @@
  "source": "https://www.mercor.com/apex/apex-agents-leaderboard/ (APEX-Agents, ranked by mean score, as the leaderboard does)",
  "retrieved": "2026-11-08",
  "pricing_source": "https://openrouter.ai/api/v1/models (retrieved 2026-11-08)",
- "rule": "APEX-Agents-derived roster, with Gemini 3.8 Flash substituted for Gemini 3.7 Flash at the user’s request. Rank is the original roster slot, not a new leaderboard ranking. A judge must not be on this roster.",
+ "rule": "APEX-Agents-derived roster, with Gemini 3.8 Flash substituted for Gemini 3.7 Flash at the user’s request. Rank is the original roster slot, not a new leaderboard ranking. GPT-6.1 Sol was added as slot 16 on 2026-11-15. A judge must not be on this roster.",
  "models": [
   {
    "rank": 1,
@@ -210,6 +210,18 @@
    "usd_per_mtok_in": 10.0,
    "usd_per_mtok_out": 50.0,
    "max_output_tokens": 128000
+  },
+  {
+   "rank": 16,
+   "model": "GPT-6.1 Sol",
+   "provider": "OpenAI",
+   "effort": "max",
+   "apex_model_id": "gpt-6-1-sol",
+   "openrouter_id": "openai/gpt-6.1-sol",
+   "usd_per_mtok_in": 2.0,
+   "usd_per_mtok_out": 10.0,
+   "max_output_tokens": 128000,
+   "note": "Added 2026-11-15 at the user's request; not an APEX-Agents roster slot, so no APEX scores. Run separately in .benchmark-runs/sol-20261115 with the current (open-book Rulebook) task code."
   }
  ]
 }

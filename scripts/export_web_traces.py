@@ -5,7 +5,8 @@ import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RUN = ROOT / '.benchmark-runs/rerun-20261107'
+# Leaderboard whose cases are exported: 11-07 roster run + 11-14 open-book Rulebook + 11-15 Sol run, all re-judged by GLM-5.3 Prime.
+LEADERBOARD = ROOT / '.benchmark-runs/rejudge-glm-20261115/final-leaderboard.json'
 
 def reasoning(message):
     details = message.get('reasoning_details') or []
@@ -82,9 +83,10 @@ def activity(submission_path, variant):
     return events
 
 
-def build(activity_dir=None):
+def build(activity_dir=None, leaderboard=LEADERBOARD):
     traces = []
-    for model in json.loads((RUN / 'final-leaderboard.json').read_text())['leaderboard']:
+    board = json.loads(Path(leaderboard).read_text())['leaderboard']
+    for model in board:
         for case in model['cases']:
             submission = json.loads((ROOT / case['submission']).read_text())
             sub = next(s for s in submission['cases'] if s['case_id'] == case['case_id'])
@@ -103,7 +105,7 @@ def build(activity_dir=None):
             case_reasoning = single_reasoning(ROOT / case['submission'], sub) if case['task'] != 'beat_ectemp' else []
             traces.append(dict(reasoning=case_reasoning,activity_path=activity_path,id=f"{model['roster_rank']}-{case['task']}-{case['case_id']}", model=model['display'], task=case['task'], case=case['case_id'], score=case['combined'], status=case['judge_status'], components=case['components'], prompt=(sub.get('materials') or {}).get('prompt'), answer=sub.get('answer'), grade=sub.get('grader'), judge=judge.get('judge'), finish_reason=sub.get('finish_reason')))
     assert len({t['id'] for t in traces}) == len(traces)
-    assert len({t['model'] for t in traces}) == 14
+    assert len({t['model'] for t in traces}) == len(board)
     payload = json.dumps(traces, ensure_ascii=False, indent=2)
     assert not re.search(r'sk-(?:or-v1|ant|proj)-[A-Za-z0-9_-]{16,}', payload)
     return payload
@@ -113,4 +115,4 @@ if __name__ == '__main__':
     target = Path(sys.argv[1])
     activity_dir = target.parent / 'activity'
     activity_dir.mkdir(exist_ok=True)
-    target.write_text(build(activity_dir))
+    target.write_text(build(activity_dir, sys.argv[2] if len(sys.argv) > 2 else LEADERBOARD))

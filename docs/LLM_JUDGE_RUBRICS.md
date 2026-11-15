@@ -1,6 +1,6 @@
 # LLM judge rubrics — draft for calibration
 
-These are proposed hackathon rubrics, not clinical validation. Freeze the
+These are proposed rubrics, not clinical validation. Freeze the
 rubric, judge model and settings, case materials and scoring protocol before
 comparing models. Test strong, weak, misleading, missing and ambiguous answers
 before use; retain judgments and any calibration failures. Do not claim a

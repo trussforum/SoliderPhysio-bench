@@ -53,7 +53,7 @@
 
 <!-- 1 -->
 <section class="slide">
-  <div class="kicker">SoldierPhysio-bench · micro1 Eval Hackathon</div>
+  <div class="kicker">SoldierPhysio-bench</div>
   <h1>Can frontier models keep a soldier<br>out of heat stroke?</h1>
   <div class="body">
     <div class="stats">
@@ -62,7 +62,7 @@
       <div class="stat"><div class="n">0</div><div class="l">core thermometers a field medic actually has</div></div>
     </div>
   </div>
-  <div class="notes"><b>~25s.</b> Heat illness is a growing Army problem (MSMR June 2025). A medic has a heart-rate strap, skin temp, work rate, weather and the heat card, but no core thermometer. They make one call over and over: keep going or pull. LLMs are pitched as decision aids for this. I tested whether 14 frontier models can make the call, on real heat-chamber data where we know the true core temperature.</div>
+  <div class="notes"><b>~25s.</b> Heat illness is a growing Army problem (MSMR June 2025). A medic has a heart-rate strap, skin temp, work rate, weather and the heat card, but no core thermometer. They make one call over and over: keep going or pull. LLMs are pitched as decision aids for this. I tested whether 15 frontier models can make the call, on real heat-chamber data where we know the true core temperature.</div>
 </section>
 
 <!-- 2 -->
@@ -82,49 +82,48 @@
 <!-- 3 -->
 <section class="slide">
   <div class="kicker">Grading</div>
-  <h2>Code grades the answer. A judge grades only the reasoning.</h2>
+  <h2>Code decides right or wrong. A judge grades the support.</h2>
   <div class="body">
     <table>
       <tr><th>Task</th><th>Deterministic (code)</th><th>LLM judge</th></tr>
-      <tr><td>Keep/Pull</td><td>decision 40% · forecast error 30%</td><td>reasoning 30%</td></tr>
-      <tr><td>Rulebook</td><td>4 table fields 30% · override 40%</td><td>reasoning 30%</td></tr>
+      <tr><td>Keep/Pull</td><td>right/wrong call · forecast error 30%</td><td>decision 40% (wrong ≤ 1/5) · reasoning 30%</td></tr>
+      <tr><td>Rulebook</td><td>4 table fields 30% · right/wrong override</td><td>override 40% (wrong ≤ 1/5) · reasoning 30%</td></tr>
       <tr><td>Beat ECTemp</td><td>MAE vs baseline on hidden people 60%</td><td>write-up 40%</td></tr>
     </table>
     <div class="side">
-      Judge: <b>openai/gpt-6.1-sol-pro</b>, outside the roster.<br><br>
-      Re-judged answers: <b>99–100%</b> same mark.<br>
-      Agreed with code on <b>305 / 305</b> decisions.<br>Checked by me, plus an <b>outside reviewer</b>.
+      Judge: <b>GLM-5.3 Prime</b>, from a lab with no model on the roster.<br><br>
+      Agreed with code on <b>206 / 207</b> decisions.<br>Checked by me, plus an <b>outside reviewer</b>.
     </div>
   </div>
-  <div class="notes"><b>~30s.</b> Everything with a right answer is computed by code against measured temperature or the exact 2022 card. The judge only scores reasoning quality, and is shown the verified outcome. Reliability: 32 answers got judged 2 to 17 times during resumed runs. Same mark 99-100% of the time. Every decision it marked low was wrong by code, every one marked high was right. I also checked the judge's prompt, rubrics and verdicts myself, and an outside reviewer I met recently vetted it too. Overall = mean of the three task scores.</div>
+  <div class="notes"><b>~30s.</b> Everything with a right answer is computed by code against measured temperature or the exact 2022 card. The judge is shown the verified outcome and grades how well each answer is supported; a wrong call can get at most 1 out of 5. The original judge, GPT-6.1 Sol Pro, was swapped for GLM-5.3 Prime when GPT-6.1 Sol joined the roster, so no judge grades its own lab. GLM agreed with code on 206 of 207 decisions; the one miss was an answer the code could not parse. It is a bit more lenient than Sol Pro, and the two OpenAI models were the only ones whose scores dropped after the swap. I checked the prompt and rubrics myself, and an outside reviewer vetted the setup. Overall = mean of the three task scores.</div>
 </section>
 
 <!-- 4 -->
 <section class="slide">
-  <div class="kicker">Results · 14 models · run 2026-11-07/08 · 1 run per case</div>
-  <h2>The best frontier model scores 54.5 / 100</h2>
-  <div class="body"><img src="../figures/leaderboard.png" alt="Leaderboard">
-    <div class="side">Top 3 within <b>2 points</b>: GPT-6 Astra, Muse Wonder 1.0, Sonnet 5.5.<br><br>Fable 5 and Opus 5.5 sink to the bottom on <b>zeros</b> from refused rulebook answers.</div></div>
+  <div class="kicker">Results · 15 models · 21 cases · 1 run per case · judge GLM-5.3 Prime</div>
+  <h2>The best frontier model scores 68.2 / 100</h2>
+  <div class="body"><img src="../figures/task_scores.png" alt="Task scores" style="max-width:60vw">
+    <div class="side">Top 3 within <b>2 points</b>: Sonnet 5.5, Muse Wonder 1.0, Hy4.<br><br>GPT-6.1 Sol, the newest model, places <b>5th</b>.<br><br>Grok 4.6 is last on keep/pull and override calls.</div></div>
   <div class="notes"><b>~15s.</b> Scores are a mix of deterministic and judged parts, not accuracy percentages. One run per case, so a couple of points is noise. Nobody comes close to what a trained medic with the card would do.</div>
 </section>
 
 <!-- 4b -->
 <section class="slide">
-  <div class="kicker">Task scores · cost by task</div>
-  <h2>Where the score and the money go</h2>
-  <div class="body"><img src="../figures/task_scores.png" alt="Task scores" style="max-width:46vw"><img src="../figures/cost_by_task.png" alt="Cost by task" style="max-width:44vw"></div>
-  <div class="notes"><b>~20s.</b> Per-task breakdown. Hy4 has the best keep/pull calls (10/12, tied with Sonnet) but only 2 of 8 card cells. Astra wins on the rulebook. On the right: 83% of all model spend went to the agentic Beat ECTemp task ($103.89 of $125.28). The cheap single-turn medic questions are where models fail, and they cost almost nothing to test.</div>
+  <div class="kicker">Cost by task</div>
+  <h2>Where the money goes</h2>
+  <div class="body"><img src="../figures/cost_by_task.png" alt="Cost by task" style="max-width:70vw"></div>
+  <div class="notes"><b>~20s.</b> 84% of all model spend went to the agentic Beat ECTemp task ($104.80 of $124.85). The cheap single-turn medic questions are where models fail, and they cost almost nothing to test.</div>
 </section>
 
 <!-- 5 -->
 <section class="slide">
-  <div class="kicker">Failure 1 · the clearest gap</div>
+  <div class="kicker">Failure 1 · from memory, without the card</div>
   <h2>They recite a heat card the Army replaced in 2022</h2>
   <div class="body"><img src="../figures/rulebook.png" alt="Rulebook answers">
     <div class="side">
       <div class="vs"><div class="old">40/20<small>2003 card · 18 answers</small></div><div class="new">NL<small>2022 card · 3 answers</small></div></div><br>
       Moderate work, Yellow flag, work/rest per hour.</div></div>
-  <div class="notes"><b>~35s.</b> This is the headline. Both rulebook cases are Moderate work at Yellow flag. Current card: NL, no limit. The 2003 card said 40 min work, 20 rest. 18 of 28 answers gave 40/20; only 3 said NL. Half also invented continuous-work limits of 45 to 120 minutes. A medic holding the current card never misses this. The models answer confidently, with the right format and the wrong edition.</div>
+  <div class="notes"><b>~35s.</b> This is the headline. Both rulebook cases are Moderate work at Yellow flag. Current card: NL, no limit. The 2003 card said 40 min work, 20 rest. 18 of 28 answers gave 40/20; only 3 said NL. Half also invented continuous-work limits of 45 to 120 minutes. The models answer confidently, with the right format and the wrong edition. That was the first run, with no card in the prompt. Once we printed the 2022 card in the prompt, every answer read it right, and 27 of 29 then overrode it anyway, including for the soldier who was fine.</div>
 </section>
 
 <!-- 6 -->
@@ -132,8 +131,8 @@
   <div class="kicker">Failure 2</div>
   <h2>Keep or pull: a coin flip that leans paranoid</h2>
   <div class="body"><img src="../figures/keep_pull.png" alt="Keep or pull outcomes">
-    <div class="side"><b>92 / 168</b> right (55%).<br><br><b>53</b> needless pulls.<br><b>20</b> missed pulls.<br><br>Forecast error 0.22–0.42 °C, about the size of the decision margin.</div></div>
-  <div class="notes"><b>~35s.</b> Models mostly catch thermal lag (left bar). They fail the reverse: more than half the safe soldiers got pulled. An aid that pulls everyone gets ignored, then it misses the one that counts. And 22 truly rising soldiers were still missed, the dangerous direction.</div>
+    <div class="side"><b>98 / 180</b> right (54%).<br><br><b>59</b> needless pulls.<br><b>20</b> missed pulls.<br><br>Forecast error 0.22–0.42 °C, about the size of the decision margin.</div></div>
+  <div class="notes"><b>~35s.</b> Models mostly catch thermal lag (left bar). They fail the reverse: more than half the safe soldiers got pulled. All three OpenAI models pulled every safe soldier. An aid that pulls everyone gets ignored, then it misses the one that counts. And 20 truly rising soldiers were still missed, the dangerous direction.</div>
 </section>
 
 <!-- 6b transcripts -->
@@ -164,10 +163,10 @@
 <!-- 7 -->
 <section class="slide">
   <div class="kicker">Pricing</div>
-  <h2>Paying 100x more does not buy a better medic</h2>
+  <h2>Paying 110x more does not buy a better medic</h2>
   <div class="body"><img src="../figures/index_vs_cost.png" alt="Index vs cost">
-    <div class="side">Whole run: <b>$141.20</b><br>incl. judge <b>$15.66</b><br><br>DeepSeek V4.1 Flash <b>$0.29</b><br>Hy4 <b>$1.09</b> → 44.9<br>GPT-6 Astra <b>$8.87</b> → 54.5<br>Fable 5.1 <b>$29.54</b> → 43.8</div></div>
-  <div class="notes"><b>~25s.</b> Provider-reported spend via OpenRouter, prices retrieved 2026-11-08. Spend barely tracks score. Hy4 matches Fable 5.1 for 1/27th the price. Bonus: research was the relative strength. 76 of 98 predictors beat the baseline. Models can fit data; they lack the field knowledge to apply it.</div>
+    <div class="side">Whole board: <b>$130.47</b><br>incl. judge <b>$5.62</b><br><br>DeepSeek V4.1 Flash <b>$0.27</b> → 59.2<br>Hy4 <b>$1.02</b> → 66.3<br>Sonnet 5.5 <b>$6.82</b> → 68.2<br>Fable 5.1 <b>$29.57</b> → 59.3</div></div>
+  <div class="notes"><b>~25s.</b> Provider-reported spend via OpenRouter, prices retrieved 2026-11-08. Spend barely tracks score. Hy4 beats Fable 5.1 for about 1/29th the price, and DeepSeek ties it for under 1%. Bonus: research was the relative strength. 81 of 105 predictors beat the baseline. Models can fit data; they lack the field knowledge to apply it.</div>
 </section>
 
 <!-- 8 -->
@@ -176,8 +175,8 @@
   <h2>Re-score my run in 10 seconds, no API key</h2>
   <div class="body" style="flex-direction:column;align-items:flex-start;gap:3vh">
 <pre>pip install -r requirements.txt
-python -m eval_suite.report_leaderboard --root results/rerun-20261107
-python scripts/judge_reliability.py
+ln -s results .benchmark-runs
+python scripts/rejudge_off_roster.py board
 # or run any OpenRouter model from scratch:
 python -m eval_suite run --model &lt;openrouter-id&gt; --tasks all --spend-cap-usd 5 ...</pre>
     <div class="side">Limits: one trial per case · format example "40/20" in the rulebook prompt · civilian lab data · public workbook (near-chance calls suggest no memorisation) · research ranks provisional.<br><br><b>The gap isn't math or code. It's the current rulebook and the judgment to leave a hot-but-fine soldier on task.</b></div>

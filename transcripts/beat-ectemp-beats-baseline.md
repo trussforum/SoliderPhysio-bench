@@ -2,7 +2,7 @@
 
 - **Model:** Muse Wonder 1.0 (`meta/muse-wonder`)
 - **Case:** `beat_ectemp/3A/H13` · finish reason `None`
-- **Combined score:** 0.729 · components {"research_explanation": 0.8, "predictor": 0.6817695444352945}
+- **Combined score:** 0.809 · components {"research_explanation": 1.0, "predictor": 0.6817695444352945}
 - **Source:** `results/rerun-20261107/continued-11-01/submissions.json`
 
 ## Prompt
@@ -78,6 +78,6 @@ In leave-one-person-out evaluation on the labeled training data, the unrobustifi
 
 ```json
 {
-  "research_explanation": 4
+  "research_explanation": 5
 }
 ```

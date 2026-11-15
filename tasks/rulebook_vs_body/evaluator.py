@@ -457,6 +457,10 @@ def render_reference_table(table: dict[str, Any]) -> str:
             cw = "NL" if cell["no_limit"] else str(cell["max_work_min"])
             cells.append(f"{cw}, {cell['water_qt_per_hr']:g} qt")
         lines.append(f"| {key} {cat['flag']} | " + " | ".join(cells) + " |")
+    lines.append("")
+    lines.append("Cat: heat category | NL: no limit | qt: US quarts per hour | WBGT: wet bulb globe temperature")
+    for col, info in table["work_categories"].items():
+        lines.append(f"{col} work = {info['examples']}")
     return "\n".join(lines)
 
 

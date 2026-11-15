@@ -1,17 +1,16 @@
-"""Index-style graphics (Truss brand: paper, slate ink, amber, EB Garamond) from the saved run.
+"""Index-style graphics (Truss brand: paper, slate ink, amber, EB Garamond) for the current board.
 
-    python scripts/make_index_charts.py [RUN_DIR] [OUT_DIR]
+    python scripts/build_site_data.py          # first: writes site/lib/soldier.json
+    python scripts/make_index_charts.py [SOLDIER_JSON] [OUT_DIR]
 
-Writes index_vs_cost.png, cost_by_task.png, task_scores.html (+ .png if Chrome is found).
-Per-task cost joins spend.sqlite charges to controller transcript requests by reservation id
-and classifies each request by its prompt. No API calls.
+Reads the same site/lib/soldier.json the results site shows (re-judged board, per-task
+cost from spend ledgers), so README figures and site always agree. Writes index_vs_cost.png,
+cost_by_task.png, keep_pull.png, task_scores.html (+ .png if Chrome is found). No API calls.
 """
 import collections
-import glob
 import html
 import json
 import shutil
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +20,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
-RUN = Path(sys.argv[1] if len(sys.argv) > 1 else ".benchmark-runs/rerun-20261107")
+SOLDIER = Path(sys.argv[1] if len(sys.argv) > 1 else "site/lib/soldier.json")
 OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "docs/figures")
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -45,36 +44,15 @@ plt.rcParams.update({
     "font.family": ["EB Garamond", "Georgia", "DejaVu Serif"],
 })
 
-lb = json.loads((RUN / "final-leaderboard.json").read_text())["leaderboard"]
+S = json.loads(SOLDIER.read_text())
 prov = lambda mid: PROVIDER[mid.split("/")[0]]
-
-# per-model, per-task provider-reported spend
-task_of = {}
-for f in glob.glob(str(RUN / "**/controller.sqlite"), recursive=True):
-    try:
-        rows = list(sqlite3.connect(f).execute("select payload from transcript"))
-    except sqlite3.Error:
-        continue
-    for (p,) in rows:
-        if '"model_request"' not in p[-400:]:
-            continue
-        d = json.loads(p)
-        r = d.get("data", {}).get("reservation")
-        if d.get("kind") != "model_request" or not r:
-            continue
-        b = json.dumps(d["data"].get("body", ""))
-        task_of[r] = ("rulebook" if "TB MED" in b else "research" if "predict" in b and "submission" in b
-                      else "keep_going" if "stationary bike" in b else "other")
-cost = collections.defaultdict(collections.Counter)
-for f in glob.glob(str(RUN / "**/spend.sqlite"), recursive=True):
-    try:
-        rows = list(sqlite3.connect(f).execute("select id, model, charged_nano, accounting from charges"))
-    except sqlite3.Error:
-        continue
-    for i, m, c, a in rows:
-        if a == "provider_reported" and c:
-            cost[m][task_of.get(i, "judge" if "sol-pro" in m else "other")] += c / 1e9
-total = {m: sum(v.values()) for m, v in cost.items()}
+lb = [{"model": m["id"], "display": m["name"], "overall_100": m["overall"],
+       "task_scores_100": {"keep_going": m["keep"], "rulebook_vs_body": m["rulebook"], "beat_ectemp": m["research"]},
+       "raw": {"keep_going": {"correct": m["calls"]}, "rulebook_vs_body": {"lookup_fields_correct": m["cells"]}}}
+      for m in S["models"]]
+cost = {m["id"]: collections.Counter(m["cost_tasks"]) for m in S["models"]}
+total = {m["id"]: m["cost"] for m in S["models"]}
+N = len(lb)
 
 
 def header(fig, text, sub=None):
@@ -92,14 +70,15 @@ def save(fig, fn):
 # 1. Index vs cost, provider-coloured
 fig, ax = plt.subplots(figsize=(13, 7.2))
 fig.subplots_adjust(top=0.88, bottom=0.2)
-header(fig, "SOLDIERPHYSIO INDEX", "14 MODELS · 21 CASES · RUN 2026-11-07/08")
+header(fig, "SOLDIERPHYSIO INDEX", f"{N} MODELS · 21 CASES · JUDGE {S['judge'].upper()}")
 by_p = collections.defaultdict(list)
 for r in lb:
     by_p[r["model"].split("/")[0]].append((total[r["model"]], r["overall_100"], r["display"]))
 OFFS = {"Muse Wonder 1.0": (8, -16), "Gemini 3.8 Flash": (0, -20), "Kimi K3.1 Pro": (0, 11),
         "Grok 4.6": (8, 6), "Opus 5": (8, -15), "Fable 5": (-8, 10), "Opus 5.5": (8, -15),
         "GPT-6.1 Terra": (0, 11), "Hy4": (0, 11), "Gemini 4 Argon": (8, -15), "Fable 5.1": (-8, 10),
-        "GPT-6 Astra": (0, 11), "Sonnet 5.5": (-10, 0), "DeepSeek-V4.1-Flash-1017": (8, -15)}
+        "GPT-6 Astra": (0, 11), "Sonnet 5.5": (-10, 0), "DeepSeek-V4.1-Flash-1017": (8, -15),
+        "GPT-6.1 Sol": (8, -15)}
 for p, pts in by_p.items():
     name, col = PROVIDER[p]
     pts.sort()
@@ -112,7 +91,8 @@ for p, pts in by_p.items():
                     family=mono, fontsize=13, color=col if p != "x-ai" else "#78716C")
 ax.set_xscale("log")
 ax.set_xlim(0.2, 45)
-ax.set_ylim(25, 60)
+lo, hi = min(r["overall_100"] for r in lb), max(r["overall_100"] for r in lb)
+ax.set_ylim(5 * int(lo // 5) - 5, 5 * int(hi // 5) + 10)
 ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"${v:g}"))
 ax.grid(True, color=GRID, lw=0.9)
 ax.set_axisbelow(True)
@@ -127,7 +107,7 @@ save(fig, "index_vs_cost.png")
 rows = sorted(lb, key=lambda r: total[r["model"]])
 fig, ax = plt.subplots(figsize=(12, 7.6))
 fig.subplots_adjust(top=0.9, bottom=0.16)
-header(fig, "COST BY TASK", f"TOTAL \\${sum(total.values()):.2f} INCL. JUDGE \\${total.get('openai/gpt-6.1-sol-pro', 0):.2f}")
+header(fig, "COST BY TASK", f"TOTAL \\${S['total_usd']:.2f} INCL. JUDGE \\${S['judge_usd']:.2f}")
 for y, r in enumerate(rows):
     left = 0
     for key, _, col in TASKS:
@@ -147,7 +127,33 @@ fig.legend(handles=[plt.Line2D([], [], marker="s", ls="", ms=11, color=c, label=
            loc="lower center", ncol=3, frameon=False, fontsize=14, bbox_to_anchor=(0.5, 0.02))
 save(fig, "cost_by_task.png")
 
-# 3. Task scores table (HTML -> PNG)
+# 3. Keep/Pull by case design (deterministic grades on the board's cases)
+kp = S["keep_pull"]
+fig, ax = plt.subplots(figsize=(11, 5.6))
+fig.subplots_adjust(top=0.86)
+n_ans = 12 * N  # every Keep/Pull answer, including unparsed ones outside the four buckets
+n_ok = sum(m["calls"] for m in S["models"])
+header(fig, "KEEP OR PULL", f"{n_ok}/{n_ans} RIGHT ({100 * n_ok / n_ans:.0f}%) · {N} MODELS")
+x = range(len(kp))
+c_, fp, mp = [d["correct"] for d in kp], [d["false_pull"] for d in kp], [d["missed"] for d in kp]
+ax.bar(x, c_, color=INK, width=0.6, label="correct call", edgecolor=BG, lw=2)
+ax.bar(x, fp, bottom=c_, color="#D6D3D1", width=0.6, label="needless pull", edgecolor=BG, lw=2)
+ax.bar(x, mp, bottom=[a + b for a, b in zip(c_, fp)], color=HEAD, width=0.6, label="missed pull (dangerous)",
+       edgecolor=BG, lw=2)
+for i in x:
+    for base, v, fg in ((0, c_[i], BG), (c_[i], fp[i], INK), (c_[i] + fp[i], mp[i], BG)):
+        if v >= 4:
+            ax.text(i, base + v / 2, str(v), ha="center", va="center", color=fg, fontsize=16)
+ax.set_xticks(list(x), [d["design"].replace(", ", ",\n") for d in kp])
+ax.tick_params(axis="x", length=0)
+ax.set_ylabel("model answers")
+ax.set_ylim(0, max(a + b + c for a, b, c in zip(c_, fp, mp)) * 1.18)
+ax.yaxis.grid(True, color=GRID, lw=0.9)
+ax.set_axisbelow(True)
+ax.legend(frameon=False, loc="upper center", ncol=3, fontsize=14, bbox_to_anchor=(0.5, 1.02))
+save(fig, "keep_pull.png")
+
+# 4. Task scores table (HTML -> PNG)
 cols = [("INDEX", lambda r: r["overall_100"] / 100, "{:.3f}"),
         ("KEEP/PULL", lambda r: r["task_scores_100"]["keep_going"] / 100, "{:.2f}"),
         ("RULEBOOK", lambda r: r["task_scores_100"]["rulebook_vs_body"] / 100, "{:.2f}"),
@@ -185,7 +191,7 @@ tr.ref td{{color:{MUTED};font-style:italic}}
 .n{{font-size:15px;font-style:italic;color:{MUTED};margin-top:16px}}
 </style><div class=k>Task scores</div><table><tr><th></th><th style="text-align:left"></th>{head}</tr>{best_row}{''.join(trs)}</table>
 <div class=n>Index = mean of the three task scores (0–1). Amber = best in column. Cost = provider-reported USD for all 21 cases.
-Fable 5 and Opus 5.5 Rulebook = 0 after content_filter refusals / empty answers.</div>"""
+Judge: {html.escape(S['judge'])} (no model from its lab is rated).</div>"""
 (OUT / "task_scores.html").write_text(page)
 chrome = shutil.which("google-chrome") or "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 if Path(chrome).exists():

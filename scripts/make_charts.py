@@ -1,6 +1,10 @@
-"""Render README/blog/video charts from the saved 2026-11-07 run. No API calls.
+"""Charts for the original closed-book 2026-11-07 run (14 models, Sol Pro judge). No API calls.
 
     python scripts/make_charts.py [RUN_DIR] [OUT_DIR]
+
+The README uses only rulebook.png from here: the closed-book finding that most models
+recited the superseded 2003 card. Current-board figures (index, cost, keep/pull, task
+scores) come from scripts/make_index_charts.py.
 """
 import collections
 import glob
@@ -103,35 +107,9 @@ ax.yaxis.set_major_locator(matplotlib.ticker.MultipleLocator(5))
 ax.yaxis.grid(True, color=GRID, lw=0.9)
 ax.set_axisbelow(True)
 ax.tick_params(axis="x", length=0)
-ax.set_title("Models recite the 2003 heat card, not the 2022 one")
-subtitle(fig, "TB MED 507, Moderate work at Yellow flag: work/rest per hour. 2022 card = NL (no limit); 2003 card = 40/20.")
+ax.set_title("Without the chart, models recite the 2003 heat card")
+subtitle(fig, "Closed-book run 2026-11-07/08, 14 models. TB MED 507, Moderate work, Yellow flag: 2022 card = NL (no limit); 2003 card = 40/20.")
 save(fig, "rulebook.png")
-
-# 3. Keep/Pull by case design
-designs = [("falling_power_thermal_lag", "Slowed down,\ncore still rising"),
-           ("steady_power_rising", "Steady work,\ncore rising"),
-           ("falling_power_safe", "Slowed down,\nactually safe"),
-           ("steady_power_safe", "Steady work,\nactually safe")]
-fig, ax = plt.subplots(figsize=(11, 5.6))
-x = range(len(designs))
-c_ = [kg[(d, "correct")] for d, _ in designs]
-fp = [kg[(d, "false_pull")] for d, _ in designs]
-mp = [kg[(d, "missed_pull")] for d, _ in designs]
-ax.bar(x, c_, color=INK, width=0.6, label="correct call", edgecolor=BG, lw=2)
-ax.bar(x, fp, bottom=c_, color=TAN, width=0.6, label="needless pull", edgecolor=BG, lw=2)
-ax.bar(x, mp, bottom=[a + b for a, b in zip(c_, fp)], color=AMBER_DEEP, width=0.6, label="missed pull (dangerous)", edgecolor=BG, lw=2)
-for i in x:
-    for base, v, fg in ((0, c_[i], BG), (c_[i], fp[i], INK), (c_[i] + fp[i], mp[i], BG)):
-        if v >= 4:
-            ax.text(i, base + v / 2, str(v), ha="center", va="center", color=fg, fontsize=16)
-ax.set_xticks(list(x), [l for _, l in designs])
-ax.tick_params(axis="x", length=0)
-ax.set_ylabel("model answers")
-ax.set_ylim(0, 50)
-ax.legend(frameon=False, loc="upper center", ncol=3, fontsize=14, bbox_to_anchor=(0.5, 1.0))
-ax.set_title("Keep or pull: 55% right, and safe soldiers get pulled", pad=28)
-subtitle(fig, "Deterministic grade vs measured rectal temp 15 min later (PULL iff >= 38.5 C). 168 answers, 14 models.")
-save(fig, "keep_pull.png")
 
 # 4. Cost vs score
 spend = collections.Counter()

@@ -93,7 +93,7 @@ def build_case(case, people, source: Path, table):
         "rows": rows,
         "answer_format": evaluator.ANSWER_FORMAT,
     }
-    task["prompt"] = evaluator.render_prompt(task, table)
+    task["prompt"] = evaluator.render_prompt(task, table, include_table=True)
     truth = {
         "task_id": case["task_id"],
         "role": case["role"],

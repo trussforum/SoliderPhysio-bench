@@ -1,8 +1,13 @@
 """Build site/lib/soldier.json and refresh public traces from the saved roster run.
 
-    python scripts/build_site_data.py [RUN_DIR]
+    python scripts/build_site_data.py [RUN_DIR [RULEBOOK_RUN_DIR]]
 
-No API calls. Requires final-leaderboard.json (run report_leaderboard first if missing).
+Keep/Pull and Beat ECTemp come from RUN_DIR (the 2026-11-07/08 roster run).
+The Rulebook task comes from RULEBOOK_RUN_DIR (the 2026-11-14 open-book rerun).
+GPT-6.1 Sol's run is SOL_RUN (2026-11-15). The leaderboard the site shows is
+JUDGE_RUN/final-leaderboard.json (scripts/rejudge_off_roster.py): every case
+re-judged by GLM-5.3 Prime. Judge cost is that re-judge only; the retired Sol Pro
+judge's spend is reported separately. No API calls.
 """
 from __future__ import annotations
 
@@ -15,9 +20,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Every judge used so far; spend under these ids is judge cost, not model cost.
+JUDGE_MODELS = {"openai/gpt-6.1-sol-pro", "z-ai/glm-5.3-prime"}
 SITE = ROOT / "site"
 RUN = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / ".benchmark-runs/rerun-20261107"
-LB_PATH = RUN / "final-leaderboard.json"
+RB_RUN = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / ".benchmark-runs/rulebook-open-20261114"
+SOL_RUN = ROOT / ".benchmark-runs/sol-20261115"
+JUDGE_RUN = ROOT / ".benchmark-runs/rejudge-glm-20261115"
+LB_PATH = JUDGE_RUN / "final-leaderboard.json"
 AUDIT_PATH = RUN / "control/completion-audit.json"
 
 KEEP_LABELS = {
@@ -49,9 +59,28 @@ def task_of_prompt(body: str) -> str:
     return "other"
 
 
-def load_task_spend() -> tuple[dict[str, float], dict[str, collections.Counter], float]:
+def load_task_spend() -> tuple[dict[str, float], dict[str, collections.Counter], float, float]:
+    """Keep/Pull and research spend from RUN, rulebook spend from RB_RUN, Sol's from SOL_RUN.
+
+    Returns (model totals, per-task spend, judge spend for the shown board, retired judge spend)."""
+    old, old_judge = run_task_spend(RUN)
+    new, new_judge = run_task_spend(RB_RUN)
+    sol, _ = run_task_spend(SOL_RUN)
+    _, judge_usd = run_task_spend(JUDGE_RUN)
+    per_model: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for model, c in old.items():
+        per_model[model].update({k: v for k, v in c.items() if k != "rulebook"})
+    for model, c in new.items():
+        per_model[model]["rulebook"] += c.get("rulebook", 0)
+    for model, c in sol.items():
+        per_model[model].update(c)
+    totals = {m: sum(c.values()) for m, c in per_model.items()}
+    return totals, per_model, judge_usd, old_judge + new_judge
+
+
+def run_task_spend(run: Path) -> tuple[dict[str, collections.Counter], float]:
     reservation_to_task: dict[str, str] = {}
-    for db in glob.glob(str(RUN / "**/controller.sqlite"), recursive=True):
+    for db in glob.glob(str(run / "**/controller.sqlite"), recursive=True):
         try:
             rows = sqlite3.connect(db).execute("select payload from transcript").fetchall()
         except sqlite3.Error:
@@ -68,7 +97,7 @@ def load_task_spend() -> tuple[dict[str, float], dict[str, collections.Counter],
 
     per_model: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     judge_usd = 0.0
-    for db in glob.glob(str(RUN / "**/spend.sqlite"), recursive=True):
+    for db in glob.glob(str(run / "**/spend.sqlite"), recursive=True):
         try:
             rows = sqlite3.connect(db).execute(
                 "select id, model, charged_nano, accounting from charges"
@@ -79,32 +108,28 @@ def load_task_spend() -> tuple[dict[str, float], dict[str, collections.Counter],
             if accounting != "provider_reported" or not nano:
                 continue
             usd = nano / 1e9
-            if "sol-pro" in model or model == "openai/gpt-6.1-sol-pro":
+            if model in JUDGE_MODELS:
                 judge_usd += usd
                 continue
             task = reservation_to_task.get(cid, "other")
             per_model[model][task] += usd
-
-    totals = {m: sum(c.values()) for m, c in per_model.items()}
-    return totals, per_model, judge_usd
+    return per_model, judge_usd
 
 
-def aggregate_charts(lb_models: set[str]) -> tuple[dict[str, int], list[dict]]:
+def aggregate_charts(lb_doc: dict) -> tuple[dict[str, int], list[dict]]:
+    """Count chart buckets from exactly the judged cases the leaderboard scores."""
     wr: collections.Counter = collections.Counter()
     kg: collections.Counter = collections.Counter()
-    seen: set[tuple[str, str]] = set()
-    for path in sorted(glob.glob(str(RUN / "*-judge*/judged.json"))):
-        judged = json.loads(Path(path).read_text())
-        model = judged["model"]
-        if model not in lb_models:
-            continue
-        for case in judged["cases"]:
-            key = (model, case["case_id"])
-            if key in seen:
+    cache: dict[str, dict] = {}
+    for row in lb_doc["leaderboard"]:
+        for ref in row["cases"]:
+            cid = ref["case_id"]
+            if not (cid.startswith("RB") or cid.startswith("KG")):
                 continue
-            seen.add(key)
+            if ref["judged"] not in cache:
+                cache[ref["judged"]] = json.loads((ROOT / ref["judged"]).read_text())
+            case = next(c for c in cache[ref["judged"]]["cases"] if c["case_id"] == cid)
             grader = case.get("grader") or {}
-            cid = case["case_id"]
             if cid.startswith("RB"):
                 got = str(((grader.get("rulebook") or {}).get("parsed") or {}).get("work_rest_min"))
                 if got == "40/20":
@@ -142,9 +167,8 @@ def build_soldier() -> dict:
     audit = json.loads(AUDIT_PATH.read_text())
     roster = {r["openrouter_id"]: r for r in json.loads((ROOT / "eval_suite/roster.json").read_text())["models"] if r.get("openrouter_id")}
 
-    lb_models = {r["model"] for r in lb_doc["leaderboard"]}
-    totals, per_task, judge_usd = load_task_spend()
-    rulebook, keep_pull = aggregate_charts(lb_models)
+    totals, per_task, judge_usd, retired_judge_usd = load_task_spend()
+    rulebook, keep_pull = aggregate_charts(lb_doc)
 
     models = []
     for row in lb_doc["leaderboard"]:
@@ -178,17 +202,20 @@ def build_soldier() -> dict:
 
     research_usd = sum(c.get("research", 0) for c in per_task.values())
     single_usd = sum(c.get("keep_going", 0) + c.get("rulebook", 0) for c in per_task.values())
-    provider_total = audit["spend"]["provider_reported"]
+    model_usd = sum(totals.values())
 
     return {
-        "run": "2026-11-07/08",
-        "judge": audit["judge_model"],
-        "total_usd": round(provider_total, 2),
+        "run": "2026-11-07/08; rulebook rerun open-book 2026-11-14; GPT-6.1 Sol added and all cases re-judged 2026-11-15",
+        "judge": lb_doc["judge_model"],
+        "previous_judge": lb_doc.get("previous_judge_model"),
+        "total_usd": round(model_usd + judge_usd, 2),
         "judge_usd": round(judge_usd, 2),
+        "retired_judge_usd": round(retired_judge_usd, 2),
+        "judgments": lb_doc.get("judgments"),
         "rulebook": rulebook,
         "keep_pull": keep_pull,
         "models": models,
-        "model_usd": round(provider_total - judge_usd, 2),
+        "model_usd": round(model_usd, 2),
         "research_usd": round(research_usd, 2),
         "single_turn_usd": round(single_usd, 2),
     }
@@ -196,7 +223,7 @@ def build_soldier() -> dict:
 
 def main() -> int:
     if not LB_PATH.exists():
-        sys.exit(f"missing {LB_PATH}; run: .venv-research/bin/python -m eval_suite.report_leaderboard")
+        sys.exit(f"missing {LB_PATH}; run: python scripts/rejudge_off_roster.py board")
     if not AUDIT_PATH.exists():
         sys.exit(f"missing {AUDIT_PATH}")
 
@@ -216,7 +243,7 @@ def main() -> int:
 
     export = ROOT / "scripts/export_web_traces.py"
     cases = traces_dir / "cases.json"
-    subprocess.run([sys.executable, str(export), str(cases)], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(export), str(cases), str(LB_PATH)], check=True, cwd=ROOT)
     print(f"wrote {cases.relative_to(ROOT)}")
     return 0
 

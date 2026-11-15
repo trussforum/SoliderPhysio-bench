@@ -19,11 +19,12 @@ the medic's view of real heat-chamber data, where the true core temperature is k
 must do three things: decide keep or pull, recite and apply the current heat card, and
 build a better core-temperature estimator than an ECTemp-style baseline.
 
-**Headline finding.** Across 14 frontier models, keep/pull calls were right 92 of 168
-times (55%), close to a coin flip. Most misses were needless pulls (53), not missed pulls
-(20). On the rulebook, 18 of 28 answers recited the superseded 2003 card (40/20 work/rest)
-instead of the current 2022 card ("NL", no limit), and only 3 got the cell right. The best
-model scored 54.5/100.
+**Headline finding.** Across 15 frontier models, keep/pull calls were right 98 of 180
+times (54%), close to a coin flip. Most misses were needless pulls (59), not missed pulls
+(20). Asked from memory, 18 of 28 rulebook answers recited the superseded 2003 card (40/20
+work/rest) instead of the current 2022 card ("NL", no limit). Handed the 2022 card, every
+answer read it correctly, yet 27 of 29 still overrode it, including for the soldier who was
+fine. The best model scored 68.2/100.
 
 ## What it tests
 
@@ -70,12 +71,15 @@ stated in the prompt.
 
 Per-case weights are frozen in [`tasks/combined_score.py`](tasks/combined_score.py):
 
-- **Keep/Pull:** 0.40 decision (code, against measured core at +15 min) + 0.30 forecast
-  (`1 - error / E`, code) + 0.30 reasoning (LLM judge, 0 to 5).
+- **Keep/Pull:** 0.40 decision + 0.30 forecast (`1 - error / E`, code) + 0.30 reasoning.
 - **Rulebook:** 0.30 table lookup (code, exact match on 4 TB MED 507 fields) + 0.40
-  override decision (code) + 0.30 reasoning (LLM judge).
+  override decision + 0.30 reasoning.
 - **Beat ECTemp:** 0.60 predictor (`1 - MAE / baseline MAE` on hidden people, code) + 0.40
-  research explanation (LLM judge).
+  research explanation.
+
+Decision, override, reasoning and research explanation are LLM-judge marks (0 to 5, see
+[LLM judge](#llm-judge)). Code still decides whether each call was right, against measured
+core temperature at +15 min, and the judge must cap a wrong call at 1.
 
 The overall score is the mean of the three task means, so the 12-case task cannot drown
 out the others. A missing answer scores 0. Constants are in
@@ -116,29 +120,46 @@ deliberately wrong answers through every deterministic grader.
 
 ### LLM judge
 
-The judge is `openai/gpt-6.1-sol-pro`, a model outside the tested roster, run in JSON mode
-at high reasoning effort. Its prompt and rubrics are in [`tasks/judge.py`](tasks/judge.py)
-and [docs/LLM_JUDGE_RUBRICS.md](docs/LLM_JUDGE_RUBRICS.md). It sees the verified outcome
-and must quote evidence from the answer for every mark. It grades only reasoning quality.
-Code computes every pass or fail on the decision, forecast, table and predictor.
+The judge is `z-ai/glm-5.3-prime` (GLM-5.3 Prime), run in JSON mode at high reasoning
+effort. No model from its lab is on the roster, and the harness refuses a judge from any
+rated lab (`check_judge_model` in [`tasks/combined_score.py`](tasks/combined_score.py)).
+Prompt and rubrics: [`tasks/judge.py`](tasks/judge.py) and
+[docs/LLM_JUDGE_RUBRICS.md](docs/LLM_JUDGE_RUBRICS.md).
 
-Reliability (`python scripts/judge_reliability.py`, no API calls):
+It is told the verified outcome first (measured core temperature, the model's exact error,
+whether the call was right), then reads only the final answer and marks each dimension 0 to
+5, quoting the answer for every mark. A right call gets 5 when well supported, 3 to 4 when
+it omits a material risk, and 2 when it is essentially lucky. A wrong call gets at most 1,
+and its reasoning at most 2. A research explanation whose predictor lost to the baseline is
+capped at 3 unless it flagged that risk. Length and confidence earn nothing. A malformed
+verdict gets one retry, after which the case is not scorable rather than zero.
 
-- *Test-retest.* During resumed runs, 32 answers were independently judged 2 to 17 times.
-  On identical answers the judge gave the same decision mark 100% of the time (728 pairs),
-  the same reasoning mark 99% of the time and was never more than one point off (766
-  pairs), the same override mark 97% of the time (38 pairs), and the same research mark
-  100% of the time (14 pairs).
-- *Agreement with the code grader.* The judge's decision mark agreed with the code on
-  every case. All 143 decisions it marked 0 or 1 were wrong by code, and all 162 it marked
-  3 to 5 were right.
-- *Human review.* I checked the judge myself: its prompt, its rubrics and its verdicts on
-  saved answers. A reviewer I met recently, kept anonymous here, also vetted it.
-- *Limits.* The re-judged answers come from two models, and the human checks were
-  qualitative reviews, not a scored inter-rater study. The judge sees the verified outcome,
-  so its decision mark largely restates the code grade. The reasoning component (30% of
-  Keep/Pull and Rulebook) is the soft part of the score. Every headline finding in this
-  README rests on code grades only.
+**Judge change.** Until 2026-11-15 the judge was `openai/gpt-6.1-sol-pro`. It was retired
+when GPT-6.1 Sol joined the roster, and every saved answer was re-judged by GLM-5.3 Prime
+([`scripts/rejudge_off_roster.py`](scripts/rejudge_off_roster.py), $5.62). No model
+answers were rerun for this.
+
+Reliability (`judge_agreement` in the board JSON, no API calls):
+
+- *Agreement with the code grader.* The decision mark agreed with code on 206 of 207
+  scored calls (wrong calls 0 to 2, right calls 3 to 5). The exception is Opus 5 on KG-11:
+  the code grader could not parse the answer, the judge read KEEP in the text and gave 5
+  instead of the capped 1. It is left as scored and adds about 1.6 points to Opus 5's
+  overall.
+- *Against the retired judge, same answers.* Same decision mark on 67% of 166 pairs (99%
+  within one point), same override mark on 24 of 27, same reasoning mark on 52% of 193
+  (76% within one), same research mark on 38% of 87 (90% within one). GLM is more lenient,
+  +0.6 on reasoning and +0.7 on research explanations on average, so 12 of the 14
+  re-judged models rose by 2 to 11 points. The two OpenAI models fell (GPT-6 Astra -1.4,
+  GPT-6.1 Terra -2.3). That fits the retired OpenAI judge favouring its own lab, but one
+  run per case cannot show it.
+- *Limits.* Each answer was judged once (4 were retried after unparseable output), so
+  there is no test-retest for this judge yet. Because the judge sees the verified outcome,
+  its decision mark mostly restates the code grade, but the judge still sets 70% of the
+  Keep/Pull and Rulebook scores. Every headline finding rests on code grades only. I
+  reviewed the judge prompt and rubrics (unchanged across judges) and the earlier judge's
+  verdicts on saved answers; an outside reviewer, kept anonymous here, also vetted the
+  setup. Both were qualitative reviews, not a scored inter-rater study.
 
 ## How to run
 
@@ -149,15 +170,15 @@ Requirements: Python 3.12 or 3.13 (scipy 1.15.3 has no 3.14 wheel), macOS or Lin
 python3.13 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # then paste your key: OPENROUTER_API_KEY=...
-python -m unittest discover -s tests       # 188 tests, ~5 s, no key needed
+python -m unittest discover -s tests       # 190 tests, ~5 s, no key needed
 ```
 
 **Re-score the saved run (no key, no cost, about 10 s).** This rebuilds the leaderboard
-below from the raw outputs in `results/` and reruns the judge reliability check:
+below, and the judge agreement figures, from the raw outputs and judgments in `results/`:
 
 ```sh
-python -m eval_suite.report_leaderboard --root results/rerun-20261107 --md-out /tmp/leaderboard.md
-python scripts/judge_reliability.py
+ln -s results .benchmark-runs     # in the submission zip only: the board records .benchmark-runs/ paths
+python scripts/rejudge_off_roster.py board
 ```
 
 **Run a model from scratch.** Example using the cheapest roster model on all 21 cases:
@@ -174,44 +195,48 @@ python -m tasks.combined_score runs/deepseek/judged.json --params tasks/scoring_
 
 Add `--tasks keep-going-or-pull-him,rulebook-versus-body` to skip the agentic task. Official
 agentic runs use the Docker backend (`--image`); the local backends are development
-sandboxes (see Technical reference). To redraw the charts, run
-`python scripts/make_charts.py` and `python scripts/make_index_charts.py`. To refresh the
-results site data (`site/lib/soldier.json`, `site/public/traces/cases.json`), run
-`python scripts/build_site_data.py`.
+sandboxes (see Technical reference). To refresh the results site data
+(`site/lib/soldier.json`, `site/public/traces/cases.json`) run
+`python scripts/build_site_data.py`, then `python scripts/make_index_charts.py` to redraw
+the figures from the same data.
 
 ## Cost and runtime
 
 The 14 single-turn cases take a few minutes per model and cost cents on cheap models and a
 few dollars on the largest. Beat ECTemp is agentic (up to 1,200 s and 64 turns per
-session, two sessions), so a full model run takes up to about 45 minutes. The full
-14-model run cost **$141.20** provider-reported, judge included. Per-model cost is in the
+session, two sessions), so a full model run takes up to about 45 minutes. The
+published 15-model board cost **$130.47** provider-reported: $124.85 for model answers and
+$5.62 for the judge. The retired Sol Pro judge had cost another $16.67. Per-model cost is in the
 results table below. A single request reserves its full output ceiling against the spend
 cap (up to about $6.40 on the largest models), so set `--spend-cap-usd` accordingly.
 
 ## Results
 
-Run on **2026-11-07 and 2026-11-08** through OpenRouter: 14 models, 21 frozen cases each,
-**one run per case**. Temperature was not set (provider default). Reasoning effort follows
-[`eval_suite/roster.json`](eval_suite/roster.json): `max` for 10 models (sent to OpenRouter
-as `xhigh`), `xhigh` for 1, `high` for 3. The output budget was 131,072 tokens. The
-single-turn tasks had no tools, browsing or retrieval.
+Answers were collected through OpenRouter on **2026-11-07 and 2026-11-08** (Keep/Pull,
+Beat ECTemp), **2026-11-14** (Rulebook, rerun with the 2022 card in the prompt) and
+**2026-11-15** (GPT-6.1 Sol, all 21 cases). Every answer was judged by GLM-5.3 Prime on
+2026-11-15. 15 models, 21 frozen cases each, **one run per case**. Temperature was not set
+(provider default). Reasoning effort follows [`eval_suite/roster.json`](eval_suite/roster.json):
+`max` for 11 models (sent to OpenRouter as `xhigh`), `xhigh` for 1, `high` for 3. The
+output budget was 131,072 tokens. The single-turn tasks had no tools, browsing or retrieval.
 
 | Rank | Model (OpenRouter ID) | Keep/Pull | Rulebook | Research | Overall /100 |
 |---:|---|---:|---:|---:|---:|
-| 1 | GPT-6 Astra (`openai/gpt-6-astra`) | 47.6 | 64.5 | 51.4 | **54.5** |
-| 2 | Muse Wonder 1.0 (`meta/muse-wonder`) | 50.8 | 50.0 | 59.9 | **53.6** |
-| 3 | Sonnet 5.5 (`anthropic/claude-sonnet-5.5`) | 60.1 | 47.0 | 50.4 | **52.5** |
-| 4 | GPT-6.1 Terra (`openai/gpt-6.1-terra`) | 46.7 | 50.0 | 47.5 | **48.1** |
-| 5 | Opus 5 (`anthropic/claude-opus-5`) | 38.5 | 50.0 | 54.8 | **47.7** |
-| 6 | Hy4 (`tencent/hy4`) | 63.2 | 17.5 | 54.1 | **44.9** |
-| 7 | Kimi K3.1 Pro (`moonshotai/kimi-k3.1-pro`) | 42.2 | 46.2 | 43.3 | **43.9** |
-| 8 | Grok 4.6 (`x-ai/grok-4.6`) | 30.8 | 59.0 | 41.8 | **43.9** |
-| 9 | Fable 5.1 (`anthropic/claude-fable-5.1`) | 37.7 | 42.5 | 51.1 | **43.8** |
-| 10 | Gemini 3.8 Flash (`google/gemini-3.8-flash`) | 38.7 | 43.2 | 48.5 | **43.5** |
-| 11 | Gemini 4 Argon (`google/gemini-4-argon`) | 41.5 | 47.0 | 28.6 | **39.0** |
-| 12 | DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash-1017`) | 38.1 | 27.5 | 48.5 | **38.0** |
-| 13 | Fable 5 (`anthropic/claude-fable-5`) | 39.5 | 0.0 | 52.1 | **30.6** |
-| 14 | Opus 5.5 (`anthropic/claude-opus-5.5`) | 32.7 | 0.0 | 57.9 | **30.2** |
+| 1 | Sonnet 5.5 (`anthropic/claude-sonnet-5.5`) | 73.6 | 75.0 | 56.1 | **68.2** |
+| 2 | Muse Wonder 1.0 (`meta/muse-wonder`) | 61.3 | 75.0 | 65.7 | **67.3** |
+| 3 | Hy4 (`tencent/hy4`) | 68.2 | 72.0 | 58.7 | **66.3** |
+| 4 | Fable 5 (`anthropic/claude-fable-5`) | 49.7 | 75.0 | 60.1 | **61.6** |
+| 5 | GPT-6.1 Sol (`openai/gpt-6.1-sol`) | 44.5 | 75.0 | 59.2 | **59.6** |
+| 6 | Fable 5.1 (`anthropic/claude-fable-5.1`) | 45.9 | 75.0 | 56.9 | **59.3** |
+| 7 | DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash-1017`) | 40.4 | 75.0 | 62.2 | **59.2** |
+| 8 | Opus 5.5 (`anthropic/claude-opus-5.5`) | 38.9 | 75.0 | 63.6 | **59.2** |
+| 9 | Gemini 3.8 Flash (`google/gemini-3.8-flash`) | 45.0 | 75.0 | 56.5 | **58.8** |
+| 10 | GPT-6 Astra (`openai/gpt-6-astra`) | 46.5 | 72.0 | 51.4 | **56.6** |
+| 11 | Opus 5 (`anthropic/claude-opus-5`) | 53.3 | 50.0 | 61.6 | **55.0** |
+| 12 | Kimi K3.1 Pro (`moonshotai/kimi-k3.1-pro`) | 42.7 | 75.0 | 46.7 | **54.8** |
+| 13 | GPT-6.1 Terra (`openai/gpt-6.1-terra`) | 43.7 | 68.0 | 47.5 | **53.1** |
+| 14 | Gemini 4 Argon (`google/gemini-4-argon`) | 50.5 | 75.0 | 28.6 | **51.4** |
+| 15 | Grok 4.6 (`x-ai/grok-4.6`) | 37.6 | 50.0 | 46.3 | **44.7** |
 
 ![Task scores](docs/figures/task_scores.png)
 
@@ -220,36 +245,36 @@ There was one trial per task, so pass^k cannot be computed (see Limits).
 
 | Model (OpenRouter ID, roster effort) | Trials per task | Keep/Pull decisions right | Card cells right | Overrides right | Predictors beating baseline | Cost per full run |
 |---|---:|---:|---:|---:|---:|---:|
-| GPT-6 Astra (`openai/gpt-6-astra`, max) | 1 | 6/12 (50%) | 6/8 | 1/2 | 5/7 | $8.87 |
-| Muse Wonder 1.0 (`meta/muse-wonder`, max) | 1 | 9/12 (75%) | 4/8 | 1/2 | 5/7 | $9.09 |
-| Sonnet 5.5 (`anthropic/claude-sonnet-5.5`, max) | 1 | 10/12 (83%) | 4/8 | 1/2 | 5/7 | $6.92 |
-| GPT-6.1 Terra (`openai/gpt-6.1-terra`, max) | 1 | 6/12 (50%) | 4/8 | 1/2 | 6/7 | $1.01 |
-| Opus 5 (`anthropic/claude-opus-5`, max) | 1 | 6/12 (50%) | 4/8 | 1/2 | 5/7 | $12.91 |
-| Hy4 (`tencent/hy4`, high) | 1 | 10/12 (83%) | 2/8 | 0/2 | 6/7 | $1.09 |
-| Kimi K3.1 Pro (`moonshotai/kimi-k3.1-pro`, max) | 1 | 5/12 (42%) | 3/8 | 1/2 | 6/7 | $1.58 |
-| Grok 4.6 (`x-ai/grok-4.6`, xhigh) | 1 | 4/12 (33%) | 4/8 | 2/2 | 5/7 | $4.42 |
-| Fable 5.1 (`anthropic/claude-fable-5.1`, max) | 1 | 6/12 (50%) | 2/8 | 1/2 | 5/7 | $29.54 |
-| Gemini 3.8 Flash (`google/gemini-3.8-flash`, high) | 1 | 6/12 (50%) | 3/8 | 1/2 | 5/7 | $3.17 |
-| Gemini 4 Argon (`google/gemini-4-argon`, high) | 1 | 7/12 (58%) | 4/8 | 1/2 | 7/7 | $3.93 |
-| DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash-1017`, max) | 1 | 5/12 (42%) | 2/8 | 0/2 | 6/7 | $0.29 |
-| Fable 5 (`anthropic/claude-fable-5`, max) | 1 | 7/12 (58%) | 0/8 | 0/2 | 5/7 | $28.82 |
-| Opus 5.5 (`anthropic/claude-opus-5.5`, max) | 1 | 5/12 (42%) | 0/8 | 0/2 | 5/7 | $13.66 |
+| Sonnet 5.5 (`anthropic/claude-sonnet-5.5`, max) | 1 | 10/12 (83%) | 8/8 | 1/2 | 5/7 | $6.82 |
+| Muse Wonder 1.0 (`meta/muse-wonder`, max) | 1 | 9/12 (75%) | 8/8 | 1/2 | 5/7 | $8.55 |
+| Hy4 (`tencent/hy4`, high) | 1 | 10/12 (83%) | 8/8 | 1/2 | 6/7 | $1.02 |
+| Fable 5 (`anthropic/claude-fable-5`, max) | 1 | 7/12 (58%) | 8/8 | 1/2 | 5/7 | $29.05 |
+| GPT-6.1 Sol (`openai/gpt-6.1-sol`, max) | 1 | 6/12 (50%) | 8/8 | 1/2 | 5/7 | $1.17 |
+| Fable 5.1 (`anthropic/claude-fable-5.1`, max) | 1 | 6/12 (50%) | 8/8 | 1/2 | 5/7 | $29.57 |
+| DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash-1017`, max) | 1 | 5/12 (42%) | 8/8 | 1/2 | 6/7 | $0.27 |
+| Opus 5.5 (`anthropic/claude-opus-5.5`, max) | 1 | 5/12 (42%) | 8/8 | 1/2 | 5/7 | $13.81 |
+| Gemini 3.8 Flash (`google/gemini-3.8-flash`, high) | 1 | 6/12 (50%) | 8/8 | 1/2 | 5/7 | $3.05 |
+| GPT-6 Astra (`openai/gpt-6-astra`, max) | 1 | 6/12 (50%) | 8/8 | 1/2 | 5/7 | $8.32 |
+| Opus 5 (`anthropic/claude-opus-5`, max) | 1 | 6/12 (50%) | 4/8 | 1/2 | 5/7 | $12.38 |
+| Kimi K3.1 Pro (`moonshotai/kimi-k3.1-pro`, max) | 1 | 5/12 (42%) | 8/8 | 1/2 | 6/7 | $1.56 |
+| GPT-6.1 Terra (`openai/gpt-6.1-terra`, max) | 1 | 6/12 (50%) | 8/8 | 1/2 | 6/7 | $0.95 |
+| Gemini 4 Argon (`google/gemini-4-argon`, high) | 1 | 7/12 (58%) | 8/8 | 1/2 | 7/7 | $3.89 |
+| Grok 4.6 (`x-ai/grok-4.6`, xhigh) | 1 | 4/12 (33%) | 8/8 | 0/2 | 5/7 | $4.21 |
 
 Scores mix deterministic and judged components and are not accuracy percentages. With one
 run per case, a gap of a few points between models is noise, so no single model's rank
 should be read as a finding. The spread that is meaningful is the pooled one: across all
-models, keep/pull accuracy sat between 33% and 83% per model and averaged 55%. Per-model
-metrics and the full walkthrough are in
-[docs/results/roster-rerun-20261107-leaderboard.md](docs/results/roster-rerun-20261107-leaderboard.md).
-Every raw answer, grade and judgment is in `results/rerun-20261107/` (`*/submissions.json`,
-`*-judge*/judged.json`, and frozen predictors under `artifact/`). The linked reports refer
-to that folder as `.benchmark-runs/rerun-20261107/`.
+models, keep/pull accuracy sat between 33% and 83% per model and averaged 54%. Every raw
+answer, grade and judgment is under `results/`;
+`results/rejudge-glm-20261115/final-leaderboard.json` names the source of every scored
+case. The per-model reports in [docs/results/](docs/results/) describe the earlier
+closed-book run under the retired judge.
 
-**Pricing.** Spend barely tracks quality. The 21 cases cost $0.29 on DeepSeek V4.1 Flash
-and $29.54 on Fable 5.1, about 100x apart. GPT-6 Astra led the board for $8.87, and Hy4
-matched Fable 5.1's score for $1.09. Beat ECTemp took 83% of model spend ($103.89 of
-$125.28, judge excluded), although the cheap single-turn questions are where the models
-fail hardest.
+**Pricing.** Spend barely tracks quality. The 21 cases cost $0.27 on DeepSeek V4.1 Flash
+and $29.57 on Fable 5.1, about 110x apart. Sonnet 5.5 led the board for $6.82, Hy4 was
+within two points for $1.02, and GPT-6.1 Sol placed fifth for $1.17. Beat ECTemp took 84%
+of model spend ($104.80 of $124.85, judge excluded), although the cheap single-turn
+questions are where the models fail hardest.
 
 ![Cost by task](docs/figures/cost_by_task.png)
 
@@ -257,58 +282,64 @@ fail hardest.
 
 ![Rulebook answers](docs/figures/rulebook.png)
 
-**1. The rulebook is out of date.** This is the clearest gap. Both rulebook cases are
-Moderate work at Yellow flag (Heat Category 3). The current card (TB MED 507, 12 April
-2022) prescribes work/rest **NL** (no limit), 0.75 qt/h water, continuous work NL, and
-1 qt/h for continuous work. The 2003 card prescribed 40/20. Of 28 answers, 18 gave 40/20,
-1 gave 20/40, 1 gave 50/10, 5 gave nothing, and only 3 said NL. Models invented a
-continuous-work limit (45 to 120 min) in 14 answers and gave continuous water as 0.75 qt/h
-instead of 1.0 in another 14. A medic holding the current card gets this right every time.
-The models answer confidently, in the right format, from the wrong edition.
-Transcripts: [40/20 answer](transcripts/rulebook-2003-card.md) (Sonnet 5.5) and
-[a correct NL answer](transcripts/rulebook-correct-NL.md) (GPT-6 Astra).
+**1. From memory, the rulebook is out of date.** Both rulebook cases are Moderate work at
+Yellow flag (Heat Category 3). The current card (TB MED 507, 12 April 2022) prescribes
+work/rest **NL** (no limit), 0.75 qt/h water, continuous work NL, and 1 qt/h for
+continuous work. The 2003 card prescribed 40/20. In the first run (2026-11-07/08, 14
+models, no card in the prompt; chart above), 18 of 28 answers gave 40/20, 1 gave 20/40, 1
+gave 50/10, 5 gave nothing, and only 3 said NL. The models answered confidently, in the
+right format, from the wrong edition. With the 2022 tables printed in the prompt, all 29
+answers that came back read all four cells correctly; the 30th (Opus 5, RB-01) was a
+content-filter refusal. The scored board uses the card-in-prompt run, so the Rulebook score
+now measures the override call, not recall. Transcripts:
+[40/20 answer](transcripts/rulebook-2003-card.md) (Sonnet 5.5, no card) and
+[a correct NL answer](transcripts/rulebook-correct-NL.md) (Sonnet 5.5, card supplied).
 
 ![Keep or pull outcomes](docs/figures/keep_pull.png)
 
 **2. Keep or pull is close to chance, and the errors lean toward over-caution.** Pooled
-across models, 92 of 168 calls were correct. By case type (deterministic grader):
+across models, 98 of 180 calls were correct. By case type (deterministic grader):
 
 | Case design | Correct | False pull | Missed pull |
 |---|---:|---:|---:|
-| Falling power, core still rising (thermal lag) | 34 | – | 7 |
-| Steady power, core rising | 28 | – | 13 |
-| Falling power, actually safe | 17 | 25 | – |
-| Steady power, safe | 13 | 28 | – |
+| Falling power, core still rising (thermal lag) | 37 | – | 7 |
+| Steady power, core rising | 31 | – | 13 |
+| Falling power, actually safe | 17 | 28 | – |
+| Steady power, safe | 13 | 31 | – |
 
 Models mostly catch thermal lag. They fail at the reverse judgment, telling which hot,
-hard-working soldier is actually fine, and pulled more than half of the safe cases. They
-also missed 13 steady-power cases where core was rising, which is the dangerous direction.
-Forecast MAE ranged from 0.22 to 0.42 °C, about the size of the margin around the 38.5 °C
-cutoff. Transcripts: [needless pull](transcripts/keep-pull-false-pull.md) (GPT-6 Astra),
-[missed pull](transcripts/keep-pull-missed-pull.md) (Sonnet 5.5), and
+hard-working soldier is actually fine: they pulled 59 of 90 safe cases, and all three
+OpenAI models pulled every safe soldier. They also missed 13 steady-power cases where core
+was rising, which is the dangerous direction. Forecast MAE ranged from 0.22 to 0.42 °C,
+about the size of the margin around the 38.5 °C cutoff. Three answers could not be parsed
+and count as wrong. Transcripts: [needless pull](transcripts/keep-pull-false-pull.md)
+(Muse Wonder 1.0), [missed pull](transcripts/keep-pull-missed-pull.md) (Sonnet 5.5), and
 [thermal lag caught](transcripts/keep-pull-thermal-lag-caught.md) (Hy4).
 
-**Where models came close.** Thermal-lag cases: 34 of 42 calls were right, the best
+**Where models came close.** Thermal-lag cases: 37 of 44 calls were right, the best
 result on any case type. What tripped them was the reverse judgment: the same falling-power
-pattern in a soldier who was actually safe produced 25 false pulls.
+pattern in a soldier who was actually safe produced 28 false pulls.
 
-**3. Override judgment is weak.** Models chose correctly whether to override the card in
-only 11 of 28 rulebook body halves.
+**3. Override judgment ignores the data.** The two rulebook cases are a matched pair: a
+soldier with a quiet wearable whose core is climbing past 38.5 °C (override and pull), and
+a soldier with an alarming heart rate whose core stays safe (follow the card). Of 29 usable
+answers, 27 overrode the card, and 13 models overrode it in both cases, so they could not
+tell the two apart. Only 14 of 30 override calls were right. Having the correct card in
+hand did not change this.
 
-**4. Research is the relative strength.** 76 of 98 person-cases beat the ECTemp-style
+**4. Research is the relative strength.** 81 of 105 person-cases beat the ECTemp-style
 baseline. The models can fit a predictor. What they lack is the field knowledge to apply
 one. Transcripts: [worse than baseline](transcripts/beat-ectemp-worse-than-baseline.md)
 (GPT-6 Astra) and [beats baseline](transcripts/beat-ectemp-beats-baseline.md) (Muse Wonder
 1.0).
 
-**5. Non-answers are a separate category.** 18 of 294 cases had no answer, and they are
-not counted as reasoning failures. Opus 5.5 and Fable 5 returned `content_filter` refusals,
-mostly on rulebook cases, which explains their 0.0. Hy4 hit the output-length limit on
-RB-01. Some Beat ECTemp sessions (Argon, Grok, Kimi) hit the 1,200 s wall before writing an
-explanation, although the predictor was saved. That is partly a harness limit, since the
-runner gives no protected time to finish the write-up, so research-explanation and overall
-ranks are provisional. Details are in the
-[rerun decision](docs/results/roster-rerun-20261107-rerun-decision.md).
+**5. Non-answers are a separate category.** 14 of 315 cases had no answer, and they are
+not counted as reasoning failures. Three were provider `content_filter` refusals (Fable 5
+KG-10, Opus 5.5 KG-02, Opus 5 RB-01). Eleven were Beat ECTemp sessions (Argon 7, Grok 2,
+Kimi 2) that hit the 1,200 s wall before writing an explanation, although the predictor
+was saved. That is partly a harness limit, since the runner gives no protected time to
+finish the write-up, so research-explanation and overall ranks are provisional. Details are
+in the [rerun decision](docs/results/roster-rerun-20261107-rerun-decision.md).
 
 ## Transcripts
 
@@ -320,50 +351,54 @@ model has a failure on record:
 
 | Model | Case | Combined | Transcript |
 |---|---|---:|---|
-| GPT-6 Astra | `KG-01` | 0.200 | [by-model/gpt-6-astra.md](transcripts/by-model/gpt-6-astra.md) |
-| Muse Wonder 1.0 | `KG-05` | 0.200 | [by-model/muse-wonder-1-0.md](transcripts/by-model/muse-wonder-1-0.md) |
 | Sonnet 5.5 | `KG-02` | 0.200 | [by-model/sonnet-5-5.md](transcripts/by-model/sonnet-5-5.md) |
-| GPT-6.1 Terra | `KG-01` | 0.200 | [by-model/gpt-6-1-terra.md](transcripts/by-model/gpt-6-1-terra.md) |
-| Opus 5 | `KG-11` | 0.120 | [by-model/opus-5.md](transcripts/by-model/opus-5.md) |
+| Muse Wonder 1.0 | `KG-05` | 0.200 | [by-model/muse-wonder-1-0.md](transcripts/by-model/muse-wonder-1-0.md) |
 | Hy4 | `KG-05` | 0.200 | [by-model/hy4.md](transcripts/by-model/hy4.md) |
-| Kimi K3.1 Pro | `KG-02` | 0.200 | [by-model/kimi-k3-1-pro.md](transcripts/by-model/kimi-k3-1-pro.md) |
-| Grok 4.6 | `KG-02` | 0.200 | [by-model/grok-4-6.md](transcripts/by-model/grok-4-6.md) |
+| Fable 5 | `KG-11` | 0.140 | [by-model/fable-5.md](transcripts/by-model/fable-5.md) |
+| GPT-6.1 Sol | `KG-01` | 0.200 | [by-model/gpt-6-1-sol.md](transcripts/by-model/gpt-6-1-sol.md) |
 | Fable 5.1 | `KG-04` | 0.200 | [by-model/fable-5-1.md](transcripts/by-model/fable-5-1.md) |
-| Gemini 3.8 Flash | `KG-02` | 0.200 | [by-model/gemini-3-8-flash.md](transcripts/by-model/gemini-3-8-flash.md) |
-| Gemini 4 Argon | `KG-05` | 0.200 | [by-model/gemini-4-argon.md](transcripts/by-model/gemini-4-argon.md) |
-| DeepSeek-V4.1-Flash-1017 | `KG-01` | 0.200 | [by-model/deepseek-v4-1-flash-1017.md](transcripts/by-model/deepseek-v4-1-flash-1017.md) |
-| Fable 5 | `KG-05` | 0.200 | [by-model/fable-5.md](transcripts/by-model/fable-5.md) |
+| DeepSeek-V4.1-Flash-1017 | `KG-13` | 0.140 | [by-model/deepseek-v4-1-flash-1017.md](transcripts/by-model/deepseek-v4-1-flash-1017.md) |
 | Opus 5.5 | `KG-01` | 0.200 | [by-model/opus-5-5.md](transcripts/by-model/opus-5-5.md) |
+| Gemini 3.8 Flash | `KG-02` | 0.140 | [by-model/gemini-3-8-flash.md](transcripts/by-model/gemini-3-8-flash.md) |
+| GPT-6 Astra | `KG-01` | 0.200 | [by-model/gpt-6-astra.md](transcripts/by-model/gpt-6-astra.md) |
+| Opus 5 | `KG-02` | 0.200 | [by-model/opus-5.md](transcripts/by-model/opus-5.md) |
+| Kimi K3.1 Pro | `KG-02` | 0.200 | [by-model/kimi-k3-1-pro.md](transcripts/by-model/kimi-k3-1-pro.md) |
+| GPT-6.1 Terra | `KG-01` | 0.200 | [by-model/gpt-6-1-terra.md](transcripts/by-model/gpt-6-1-terra.md) |
+| Gemini 4 Argon | `KG-05` | 0.200 | [by-model/gemini-4-argon.md](transcripts/by-model/gemini-4-argon.md) |
+| Grok 4.6 | `KG-07` | 0.140 | [by-model/grok-4-6.md](transcripts/by-model/grok-4-6.md) |
 
 **Seven illustrative cases**, indexed in [transcripts/README.md](transcripts/README.md): a
 needless pull, a missed pull, a caught thermal lag, an answer from the 2003 card, a correct
 NL answer, and one Beat ECTemp session each that beat and missed the baseline. These cover at
-least one failure per task. The raw answer, grade and judgment for all 14 models and all 21
-cases are in `results/rerun-20261107/`.
+least one failure per task. The raw answer, grade and judgment for all 15 models and all 21
+cases are under `results/`.
 
 ## Main failure mode and hot take
 
 The failures are not arithmetic or code. They are what a field medic carries around: the
 current edition of the rulebook, and the judgment to leave a hot but healthy soldier on
-task. Models know what a heat card looks like and can fit a predictor, but 18 of 28 answers
-came from the superseded edition of the rule, and pulls were driven more by caution than
-by the core trend. The practical lesson is that a decision aid in this loop needs the
-current rulebook supplied and a way to express uncertainty about core temperature. More
-spend did not buy either: the cheapest model finished 12th and the most expensive 9th.
+task. From memory, 18 of 28 answers came from the superseded edition of the card. Handed
+the current card, models read it perfectly and then overrode it in 27 of 29 answers, and
+pulls were driven more by caution than by the core trend. A decision aid in this loop needs
+the current rulebook supplied, a way to express uncertainty about core temperature, and a
+check on its override calls. More spend did not buy any of these: the cheapest model
+finished 7th and the most expensive 6th.
 
 ## Limits
 
 - **One trial per task.** Model outputs vary run to run. The guide recommends 3 to 5
-  trials and pass^k. Budget allowed one full 14-model run, so per-model differences of a
-  few points are noise. The pooled findings (18 of 28 old-card answers, 53 needless pulls
-  out of 168 calls) are more stable than any single model's rank.
+  trials and pass^k. Budget allowed one full run per model, so per-model differences of a
+  few points are noise. The pooled findings (18 of 28 old-card answers from memory, 27 of
+  29 overrides with the card, 59 needless pulls in 180 calls) are more stable than any
+  single model's rank.
 - **Small task count.** 21 frozen cases: 12 Keep/Pull, 2 Rulebook (both the same card
   cell), and 7 hidden people for Beat ECTemp.
+- **Mixed run dates.** Rulebook answers (2026-11-14) and GPT-6.1 Sol (2026-11-15) were
+  collected after the rest, so a provider could have changed a model behind the same ID.
 - **Civilian lab data,** not soldiers in kit in the field.
 - **Public data.** The workbook could be memorised. Near-chance decisions suggest it was not.
 - **Harness wall limit.** Some research write-ups were cut off; research and overall ranks
   are provisional.
-- **Judge sees the outcome.** The reasoning marks are the soft part of the score.
 
 ## How AI tools were used
 
@@ -372,14 +407,13 @@ AI coding agents (Claude Code, Codex and Cursor) wrote most of the harness, grad
 report scripts and charts, and drafted this README. I chose the domain, the three task
 types and the case designs (thermal lag, safe slowdowns, the quiet-wearable trap), picked
 the 2022 TB MED 507 cell, and checked the transcription against the DCPH-A cards. I
-reviewed the LLM judge myself (prompt, rubrics and verdicts on saved answers), and an
-outside reviewer I met recently, kept anonymous here, also vetted it. [Add anything else
+reviewed the LLM judge (see [LLM judge](#llm-judge)). [Add anything else
 you personally checked, e.g. task prompts, ground-truth temperatures, transcripts.] Every
 number in this README was recomputed from the saved run by the scripts listed above.
 
 ## Provenance: prior work, data and sources
 
-- **Built for this hackathon:** all tasks, graders, the runner and the results in this
+- **Original to this repo:** all tasks, graders, the runner and the results in this
   repo. Git history starts on 2026-11-05. An earlier, broader physiology-agent leaderboard
   in the same repo was deleted before these tasks were written (see "Legacy tasks removed"
   below and [docs/history](docs/history)). None of its results are used here. Task-independent
@@ -395,7 +429,7 @@ number in this README was recomputed from the saved run by the scripts listed ab
   `ectemp_baseline.py` here is an ECTemp-style comparator, not a reproduction.
 - **Context:** MSMR Vol. 32 No. 6 (June 2025), heat illness in the active component.
 - **Model roster:** selection followed public APEX leaderboard ranks (recorded in
-  `roster.json`).
+  `roster.json`). GPT-6.1 Sol (slot 16) was added on 2026-11-15 outside that ranking.
 - **Known risk:** the workbook is public, so a model could have memorised it. Tools were
   off during the single-turn runs, and near-chance decisions suggest no recall. See the
   keep_going README.
@@ -475,4 +509,3 @@ Raw datasets and historical run evidence are preserved in their existing local
 data directories. Task-independent hashing, transcripts, spending controls and
 the offline worker were retained under `eval_suite/core/`. Historical reports
 are in [docs/history](docs/history); their results do not validate the new tasks.
-[Removal record](docs/LEGACY_REMOVAL.json).

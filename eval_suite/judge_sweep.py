@@ -7,14 +7,16 @@ from eval_suite.core.common import digest, read, write
 from eval_suite.core.spend import SpendLedger
 from eval_suite.core.transcript import Transcript
 from tasks.judge import OpenRouterJudgeClient, run_case, load_rubric
-from tasks.combined_score import check_judge_model
+from tasks.combined_score import JUDGE_MODEL, check_judge_model
 
 
 class FrontierJudge(OpenRouterJudgeClient):
-    # Sol Pro uses the Sol model with the provider's higher-compute pro mode;
-    # neither Sol nor Sol Pro is on the frozen participant roster.
-    model = 'openai/gpt-6.1-sol-pro'
-    pricing = {'prompt': '0.000002', 'completion': '0.000010'}
+    # GLM-5.3 Prime (Zhipu). check_judge_model rejects any judge whose lab has a
+    # model on the rated roster, so the judge never grades a sibling model.
+    # Until 2026-11-15 the judge was openai/gpt-6.1-sol-pro; it was retired when
+    # openai/gpt-6.1-sol joined the roster.
+    model = JUDGE_MODEL
+    pricing = {'prompt': '0.0000028', 'completion': '0.0000088'}
 
     def __init__(self):
         super().__init__(timeout=300)

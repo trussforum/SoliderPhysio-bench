@@ -1,4 +1,4 @@
-# Rulebook: recites the superseded 2003 card (40/20)
+# Rulebook, closed-book run (no chart in prompt, Sol Pro judge): recites the superseded 2003 card (40/20)
 
 - **Model:** Sonnet 5.5 (`anthropic/claude-sonnet-5.5`)
 - **Case:** `rulebook_vs_body/RB-01` · finish reason `stop`

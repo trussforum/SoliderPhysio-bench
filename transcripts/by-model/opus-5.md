@@ -1,44 +1,44 @@
-# Opus 5: weakest single-turn answer (keep_going/KG-11)
+# Opus 5: weakest single-turn answer (keep_going/KG-02)
 
 - **Model:** Opus 5 (`anthropic/claude-opus-5`)
-- **Case:** `keep_going/KG-11` · finish reason `stop`
-- **Combined score:** 0.120 · components {"decision": 0.0, "reasoning": 0.4, "forecast": 0.0}
+- **Case:** `keep_going/KG-02` · finish reason `stop`
+- **Combined score:** 0.200 · components {"decision": 0.2, "reasoning": 0.4, "forecast": 0.0}
 - **Source:** `results/rerun-20261107/continued-12-01/submissions.json`
 
 ## Prompt (exactly as sent)
 
 ```text
-You are the medic watching one soldier on a stationary bike inside a heat chamber. The soldier has been riding for 25 minutes. The table below is the last 25 minutes of the soldier's wearable and chamber log, ending now (ride minute 25). Core temperature is NOT measured. Blank cells mean that value was not logged that minute.
+You are the medic watching one soldier on a stationary bike inside a heat chamber. The soldier has been riding for 30 minutes. The table below is the last 25 minutes of the soldier's wearable and chamber log, ending now (ride minute 30). Core temperature is NOT measured. Blank cells mean that value was not logged that minute.
 
-Soldier: age 46 years, body mass 75 kg.
+Soldier: age 27 years, body mass 72 kg.
 
 | ride min | HR (bpm) | skin (C) | room (C) | RH (%) | watts |
 |---:|---:|---:|---:|---:|---:|
-| 1 |  | 33.7 |  |  | 122 |
-| 2 |  | 33.6 |  |  | 122 |
-| 3 |  | 33.6 |  |  | 122 |
-| 4 |  | 33.9 |  |  | 122 |
-| 5 |  | 34.0 |  |  | 122 |
-| 6 | 169 | 34.2 | 35.0 | 15 | 122 |
-| 7 | 169 | 34.4 | 35.0 | 15 | 122 |
-| 8 | 172 | 34.5 | 35.0 | 15 | 122 |
-| 9 | 172 | 34.6 | 35.0 | 15 | 122 |
-| 10 | 172 | 34.6 | 35.0 | 16 | 122 |
-| 11 |  | 34.5 | 35.0 | 16 | 122 |
-| 12 |  | 34.5 | 35.0 | 16 | 122 |
-| 13 |  | 34.6 | 35.0 | 16 | 122 |
-| 14 |  | 34.6 | 35.0 | 16 | 122 |
-| 15 |  | 34.6 | 35.0 | 16 | 122 |
-| 16 |  | 34.6 | 35.0 | 16 | 122 |
-| 17 |  | 34.5 | 35.0 | 16 | 122 |
-| 18 |  | 34.5 | 35.0 | 16 | 122 |
-| 19 |  | 34.5 | 35.0 | 16 | 122 |
-| 20 |  | 34.4 | 35.0 | 16 | 122 |
-| 21 | 180 | 34.3 | 35.0 | 19 | 122 |
-| 22 | 178 | 34.3 | 35.0 | 19 | 122 |
-| 23 | 179 | 34.3 | 35.0 | 19 | 122 |
-| 24 | 179 | 34.3 | 35.0 | 19 | 122 |
-| 25 | 179 | 34.3 | 35.0 | 19 | 122 |
+| 6 | 145 | 33.1 | 35.0 | 19 | 215 |
+| 7 | 147 | 33.0 | 35.0 | 19 | 215 |
+| 8 | 152 | 32.9 | 35.0 | 19 | 215 |
+| 9 | 154 | 32.8 | 35.0 | 19 | 215 |
+| 10 | 153 | 32.7 | 35.0 | 19 | 215 |
+| 11 |  | 32.8 | 35.0 | 19 | 215 |
+| 12 |  | 32.8 | 35.0 | 19 | 215 |
+| 13 |  | 32.9 | 35.0 | 19 | 215 |
+| 14 |  | 32.9 | 35.0 | 19 | 215 |
+| 15 |  | 32.9 | 35.0 | 19 | 215 |
+| 16 |  | 33.0 | 35.0 | 19 | 215 |
+| 17 |  | 33.0 | 35.0 | 19 | 215 |
+| 18 |  | 33.0 | 35.0 | 19 | 215 |
+| 19 |  | 33.0 | 35.0 | 19 | 215 |
+| 20 |  | 33.3 | 35.0 | 19 | 215 |
+| 21 | 164 | 33.5 | 35.0 | 26 | 215 |
+| 22 | 167 | 33.5 | 35.0 | 26 | 215 |
+| 23 | 168 | 33.3 | 35.0 | 26 | 215 |
+| 24 | 171 | 33.2 | 35.0 | 26 | 215 |
+| 25 | 168 | 33.3 | 36.0 | 25 | 180 |
+| 26 |  | 33.4 | 36.0 | 25 | 180 |
+| 27 |  | 33.2 | 36.0 | 25 | 180 |
+| 28 |  | 33.1 | 36.0 | 25 | 180 |
+| 29 |  | 32.7 | 36.0 | 25 | 180 |
+| 30 |  | 32.4 | 36.0 | 25 | 180 |
 
 Rule: the soldier must be pulled now if core temperature 15 minutes from now would be at or above 38.5 C. Otherwise the soldier keeps going at the workload currently being held.
 
@@ -60,7 +60,7 @@ Answer with one JSON object and nothing else:
   "decision": "KEEP",
   "core_c_in_15_min": "38.3",
   "confidence": "0.35",
-  "reasoning": "External work of 122 W implies ~550-600 W metabolic rate (~7 METs, roughly 55-65% VO2max for a 46-year-old), giving an expected steady-state core of about 38.0-38.4 C; at 25 min the soldier is likely ~70-80% of the way to that plateau, i.e. ~38.0-38.1 C now, and an exponential approach adds only ~0.2 C over the next 15 min. The strongest trace evidence against runaway hyperthermia is the skin temperature, which rose early and has since plateaued and even drifted down (34.6 to 34.3 C) against a fixed 35 C room: in 16-19% RH the evaporative capacity is large, so sweating is clearly compensating rather than failing, and the chamber RH has only crept up 4 points. HR drifted from 172 to ~180 but has been flat at 178-179 for the last five minutes, consistent with a cardiovascular/thermal plateau rather than progressive storage. The main uncertainty is that HR ~179 is at or above age-predicted max, so relative intensity (and therefore plateau core) could be higher than modeled, and the narrow core-skin gradient leaves little margin; I would keep riding but re-check at 5-minute intervals and pull immediately if skin temp starts climbing again or HR passes ~185.",
+  "reasoning": "At 215 W (~760 W net heat production) for ~25 min in 35 C dry heat the soldier has likely stored roughly 1.0-1.3 C, putting core near 38.1-38.3 now; the 145->171 bpm drift at fixed watts is consistent with that strain plus some dehydration, not with runaway hyperthermia. The workload was already cut to 180 W at min 25 (~640 W net heat), and with low humidity (25% RH) and a skin temperature held ~3.5 C below air temperature, required evaporation (~730 W) is still within achievable Emax for a sweating 72 kg soldier, so the trajectory should flatten rather than climb steeply. The 1.1 C fall in skin temperature over the last 5 minutes while room temperature rose is most consistent with heavy sweat evaporation after the power reduction rather than cutaneous vasoconstriction, which would normally come with an accelerating, not absent, HR signal. Main hazard is that HR has not been logged since min 25, so I am only ~65% sure core stays under 38.5: continue only with HR restored, and pull immediately if HR climbs back above ~175 at 180 W, skin keeps falling, or sweating visibly drops."
 }
 ```
 
@@ -68,19 +68,19 @@ Answer with one JSON object and nothing else:
 
 ```json
 {
-  "confidence": null,
-  "core_abs_error_c": null,
-  "core_estimate_c": null,
-  "core_truth_c": 38.32,
+  "confidence": 0.35,
+  "core_abs_error_c": 0.58,
+  "core_estimate_c": 38.3,
+  "core_truth_c": 38.88,
   "decision_correct": false,
-  "design": "steady_power_safe",
-  "error_type": "unparsed",
-  "expected_decision": "KEEP",
-  "model_decision": null,
-  "parse_mode": "none",
+  "design": "falling_power_thermal_lag",
+  "error_type": "missed_pull",
+  "expected_decision": "PULL",
+  "model_decision": "KEEP",
+  "parse_mode": "json",
   "role": "primary",
   "score": 0.0,
-  "task_id": "KG-11"
+  "task_id": "KG-02"
 }
 ```
 
@@ -88,7 +88,7 @@ Answer with one JSON object and nothing else:
 
 ```json
 {
-  "decision": 0,
+  "decision": 1,
   "reasoning": 2
 }
 ```

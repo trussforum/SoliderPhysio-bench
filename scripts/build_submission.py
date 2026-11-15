@@ -1,7 +1,10 @@
-"""Build the micro1 hackathon submission zip.
+"""Build the submission zip.
 
-Includes repo files (tracked + untracked, minus .gitignore) and a slim copy of the
-2026-11-07 roster run: answers, grades, judgments and frozen predictor artifacts.
+Includes repo files (tracked + untracked, minus .gitignore) and slim copies of the saved
+runs behind the published board: answers, grades, judgments and frozen predictor artifacts.
+RUNS: the 2026-11-07 roster run, the 2026-11-14 open-book Rulebook rerun, the 2026-11-15
+GPT-6.1 Sol run, and the 2026-11-15 GLM-5.3 Prime re-judge (whose final-leaderboard.json is
+the published board).
 Excludes controller SQLite logs, .env files, and source files the eval does not use.
 
     python3 scripts/build_submission.py [--out dist/soldierphysio-bench.zip]
@@ -14,10 +17,11 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RUN = ROOT / ".benchmark-runs" / "rerun-20261107"
+RUNS = [ROOT / ".benchmark-runs" / n for n in
+        ("rerun-20261107", "rulebook-open-20261114", "sol-20261115", "rejudge-glm-20261115")]
 RESULT_NAMES = {"submissions.json", "judged.json", "rating.json", "grader.json",
                 "identity.json", "artifact_hashes.json", "completion-audit.json",
-                "final-leaderboard.json", "score-components.json"}
+                "final-leaderboard.json", "score-components.json"} | {f"model-{i:02d}.json" for i in range(2, 17)}  # re-judge inputs
 EXCLUDE = (re.compile(r"(^|/)\.env($|\.(?!example$))"),
            re.compile(r"^sources/hardware-final-v2\.xlsx$"),   # unused, provenance unknown
            re.compile(r"^sources/physionet-wearable/"),        # unused by active tasks
@@ -36,12 +40,13 @@ def repo_files():
 
 
 def run_files():
-    for p in sorted(RUN.rglob("*")):
-        if not p.is_file():
-            continue
-        rel = p.relative_to(RUN).as_posix()
-        if p.name in RESULT_NAMES or ("/artifact/" in f"/{rel}" and p.stat().st_size <= MAX_ARTIFACT_FILE):
-            yield p, f"results/rerun-20261107/{rel}"
+    for run in RUNS:
+        for p in sorted(run.rglob("*")):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(run).as_posix()
+            if p.name in RESULT_NAMES or ("/artifact/" in f"/{rel}" and p.stat().st_size <= MAX_ARTIFACT_FILE):
+                yield p, f"results/{run.name}/{rel}"
 
 
 def main():

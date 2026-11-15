@@ -30,7 +30,7 @@ to weigh current observations and predicted outcomes.
   each case for sufficient measured coverage before selecting it.
 - An independent LLM judge assesses forecast, decision and reasoning separately
   using a rubric. Calculate numerical forecast error in code as well. This is
-  an expert-style hackathon assessment, not human expert validation.
+  an expert-style assessment, not human expert validation.
 - Score decision and reasoning separately on a 0–5 scale, with written evidence
   supporting each score. Report the forecast, measured minute-45 temperature
   and numerical error in °C; the judge also assesses forecast uncertainty.

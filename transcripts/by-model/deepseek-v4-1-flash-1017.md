@@ -1,44 +1,44 @@
-# DeepSeek-V4.1-Flash-1017: weakest single-turn answer (keep_going/KG-01)
+# DeepSeek-V4.1-Flash-1017: weakest single-turn answer (keep_going/KG-13)
 
 - **Model:** DeepSeek-V4.1-Flash-1017 (`deepseek/deepseek-v4.1-flash-1017`)
-- **Case:** `keep_going/KG-01` · finish reason `stop`
-- **Combined score:** 0.200 · components {"decision": 0.2, "reasoning": 0.4, "forecast": 0.0}
-- **Source:** `results/rerun-20261107/model-06-fresh/submissions.json`
+- **Case:** `keep_going/KG-13` · finish reason `stop`
+- **Combined score:** 0.140 · components {"decision": 0.2, "reasoning": 0.2, "forecast": 0.0}
+- **Source:** `results/rerun-20261107/model-06-resume-2/submissions.json`
 
 ## Prompt (exactly as sent)
 
 ```text
-You are the medic watching one soldier on a stationary bike inside a heat chamber. The soldier has been riding for 30 minutes. The table below is the last 25 minutes of the soldier's wearable and chamber log, ending now (ride minute 30). Core temperature is NOT measured. Blank cells mean that value was not logged that minute.
+You are the medic watching one soldier on a stationary bike inside a heat chamber. The soldier has been riding for 25 minutes. The table below is the last 25 minutes of the soldier's wearable and chamber log, ending now (ride minute 25). Core temperature is NOT measured. Blank cells mean that value was not logged that minute.
 
-Soldier: age 33 years, body mass 59 kg.
+Soldier: age 47 years, body mass 88 kg.
 
 | ride min | HR (bpm) | skin (C) | room (C) | RH (%) | watts |
 |---:|---:|---:|---:|---:|---:|
-| 6 | 147 | 34.3 | 34.0 | 12 | 140 |
-| 7 | 149 | 34.4 | 34.0 | 12 | 140 |
-| 8 | 149 | 34.7 | 34.0 | 12 | 140 |
-| 9 | 153 | 35.0 | 34.0 | 12 | 140 |
-| 10 | 150 | 35.2 | 35.0 | 18 | 140 |
-| 11 |  | 35.2 | 35.0 | 18 | 140 |
-| 12 |  | 35.4 | 35.0 | 18 | 140 |
-| 13 |  | 35.6 | 35.0 | 18 | 140 |
-| 14 |  | 35.7 | 35.0 | 18 | 140 |
-| 15 |  | 35.8 | 35.0 | 18 | 140 |
-| 16 |  | 35.9 | 35.0 | 18 | 140 |
-| 17 |  | 36.0 | 35.0 | 18 | 140 |
-| 18 |  | 36.0 | 35.0 | 18 | 140 |
-| 19 |  | 36.0 | 35.0 | 18 | 140 |
-| 20 |  | 35.9 | 35.0 | 18 | 140 |
-| 21 | 153 | 35.7 | 37.0 | 23 | 140 |
-| 22 | 156 | 35.6 | 37.0 | 23 | 140 |
-| 23 | 149 | 35.4 | 37.0 | 23 | 140 |
-| 24 | 158 | 35.2 | 37.0 | 23 | 140 |
-| 25 | 155 | 35.0 | 37.0 | 18 | 140 |
-| 26 |  | 34.7 | 37.0 | 18 | 140 |
-| 27 |  | 34.7 | 37.0 | 18 | 140 |
-| 28 |  | 34.7 | 37.0 | 18 | 140 |
-| 29 |  | 34.6 | 37.0 | 18 | 140 |
-| 30 |  | 34.5 | 37.0 | 18 | 140 |
+| 1 |  | 33.7 |  |  | 151 |
+| 2 |  | 33.7 |  |  | 151 |
+| 3 |  | 33.6 |  |  | 151 |
+| 4 |  | 33.6 |  |  | 151 |
+| 5 |  | 33.5 |  |  | 151 |
+| 6 | 169 | 33.5 | 35.0 | 16 | 151 |
+| 7 | 170 | 33.4 | 35.0 | 16 | 151 |
+| 8 | 170 | 33.5 | 35.0 | 16 | 151 |
+| 9 | 171 | 33.5 | 35.0 | 16 | 151 |
+| 10 | 173 | 33.4 | 35.0 | 18 | 139 |
+| 11 |  | 33.5 | 35.0 | 18 | 139 |
+| 12 |  | 33.5 | 35.0 | 18 | 139 |
+| 13 |  | 33.7 | 35.0 | 18 | 139 |
+| 14 |  | 33.8 | 35.0 | 18 | 139 |
+| 15 |  | 33.9 | 35.0 | 18 | 139 |
+| 16 |  | 33.9 | 35.0 | 18 | 139 |
+| 17 |  | 33.9 | 35.0 | 18 | 139 |
+| 18 |  | 34.0 | 35.0 | 18 | 139 |
+| 19 |  | 34.0 | 35.0 | 18 | 139 |
+| 20 |  | 33.9 | 35.0 | 18 | 139 |
+| 21 | 175 | 33.8 | 35.0 | 23 | 139 |
+| 22 | 174 | 33.8 | 35.0 | 23 | 139 |
+| 23 | 173 | 33.8 | 35.0 | 23 | 139 |
+| 24 | 175 | 33.8 | 35.0 | 23 | 139 |
+| 25 | 175 | 33.8 | 36.0 | 23 | 139 |
 
 Rule: the soldier must be pulled now if core temperature 15 minutes from now would be at or above 38.5 C. Otherwise the soldier keeps going at the workload currently being held.
 
@@ -58,9 +58,9 @@ Answer with one JSON object and nothing else:
 ```text
 {
   "decision": "PULL",
-  "core_c_in_15_min": 38.6,
-  "confidence": 0.65,
-  "reasoning": "The soldier is holding a substantial workload in a hot chamber, with heart rate already elevated to about 150–158 bpm despite only 140 W. The falling skin temperature to 34.5 C is consistent with strong evaporative cooling, but it does not guarantee a safe core temperature; in heat stress, core can continue rising while skin is cooled by sweat. Given the 37 C environment, maintained workload, small body mass, and cardiovascular strain, core temperature is likely to reach at least 38.5 C within 15 minutes. The safer and more physiologically plausible decision is therefore to pull."
+  "core_c_in_15_min": 38.7,
+  "confidence": 0.8,
+  "reasoning": "The soldier is in a hot chamber with a heart rate of 175 bpm at age 47, near or above his age-predicted maximum, indicating severe cardiovascular strain. Despite a reduced workload, heart rate remains plateaued at a very high level, suggesting substantial heat strain and limited cardiovascular reserve. With continued exercise at 36°C and 23% RH, core temperature is likely to keep rising over the next 15 minutes and exceed the 38.5°C safety threshold."
 }
 ```
 
@@ -68,19 +68,19 @@ Answer with one JSON object and nothing else:
 
 ```json
 {
-  "confidence": 0.65,
-  "core_abs_error_c": 0.36,
-  "core_estimate_c": 38.6,
-  "core_truth_c": 38.24,
+  "confidence": 0.8,
+  "core_abs_error_c": 0.38,
+  "core_estimate_c": 38.7,
+  "core_truth_c": 38.32,
   "decision_correct": false,
-  "design": "steady_power_safe",
+  "design": "falling_power_safe",
   "error_type": "false_pull",
   "expected_decision": "KEEP",
   "model_decision": "PULL",
   "parse_mode": "json",
   "role": "primary",
   "score": 0.0,
-  "task_id": "KG-01"
+  "task_id": "KG-13"
 }
 ```
 
@@ -89,6 +89,6 @@ Answer with one JSON object and nothing else:
 ```json
 {
   "decision": 1,
-  "reasoning": 2
+  "reasoning": 1
 }
 ```

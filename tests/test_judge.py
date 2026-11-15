@@ -266,7 +266,7 @@ class OpenRouter(unittest.TestCase):
         self.assertEqual(req.get_header('Authorization'), 'Bearer test-secret')
         self.assertEqual(req.get_header('Content-type'), 'application/json')
         self.assertEqual(self.http.call_args.kwargs['timeout'], 120)
-        self.assertEqual(body, {'model': 'openai/gpt-6.1-sol',
+        self.assertEqual(body, {'model': 'z-ai/glm-5.3-prime',
                                'messages': [{'role': 'user', 'content': rec['prompt']}],
                                'reasoning': {'effort': 'high'},
                                'max_tokens': 8192, 'response_format': {'type': 'json_object'},

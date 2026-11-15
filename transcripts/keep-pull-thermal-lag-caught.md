@@ -2,7 +2,7 @@
 
 - **Model:** Hy4 (`tencent/hy4`)
 - **Case:** `keep_going/KG-02` · finish reason `stop`
-- **Combined score:** 0.640 · components {"decision": 1.0, "reasoning": 0.8, "forecast": 0.0}
+- **Combined score:** 0.700 · components {"decision": 1.0, "reasoning": 1.0, "forecast": 0.0}
 - **Source:** `results/rerun-20261107/continued-03-01/submissions.json`
 
 ## Prompt (exactly as sent)
@@ -84,6 +84,6 @@ Answer with one JSON object and nothing else:
 ```json
 {
   "decision": 5,
-  "reasoning": 4
+  "reasoning": 5
 }
 ```

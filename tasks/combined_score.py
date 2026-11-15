@@ -123,6 +123,9 @@ def combined(task, comp):
     return sum(WEIGHTS[task][k] * comp[k] for k in WEIGHTS[task])
 
 
+JUDGE_MODEL = 'z-ai/glm-5.3-prime'
+
+
 def _model_key(name):
     return str(name).strip().lower().rsplit('/', 1)[-1]  # 'openai/x' and 'x' are the same model
 
@@ -133,6 +136,11 @@ def check_judge_model(model, rated=()):
     ids = [m['openrouter_id'] for m in roster['models'] if m.get('openrouter_id')]
     if model and _model_key(model) in {_model_key(m) for m in [*ids, *rated]}:
         raise ValueError(f'judge model is also on the rated roster: {model}')
+    # Same-lab siblings share training data and style, so reject the whole lab
+    # (e.g. Sol Pro may not judge while Sol is rated).
+    labs = {m.split('/', 1)[0].lower() for m in [*ids, *rated] if '/' in str(m)}
+    if model and '/' in str(model) and str(model).split('/', 1)[0].lower() in labs:
+        raise ValueError(f'judge model comes from a lab on the rated roster: {model}')
 
 
 def check_judge_off_roster(runs):

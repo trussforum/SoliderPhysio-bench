@@ -1,19 +1,24 @@
 """Write representative transcripts (prompt, raw answer, code grade, judge marks) to transcripts/.
 
-Picks real saved cases from the 2026-11-07 run: at least one failure per task plus
-successes. No API calls.
+Picks real saved cases from the published board (BOARD: every case re-judged by GLM-5.3
+Prime on 2026-11-15): at least one failure per task plus successes. The 2003-card example
+comes from the closed-book 2026-11-07 run (OLD_BOARD, Sol Pro judge), the only run where
+the chart was not in the prompt. No API calls.
 
-    python scripts/extract_transcripts.py [RUN_DIR] [OUT_DIR]
+    python scripts/extract_transcripts.py [BOARD_JSON] [OUT_DIR]
 """
 import json
 import sys
 from pathlib import Path
 
-RUN = Path(sys.argv[1] if len(sys.argv) > 1 else ".benchmark-runs/rerun-20261107")
-OUT = Path(sys.argv[2] if len(sys.argv) > 2 else "transcripts")
+ROOT = Path(__file__).resolve().parents[1]
+BOARD = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / ".benchmark-runs/rejudge-glm-20261115/final-leaderboard.json")
+OLD_BOARD = ROOT / ".benchmark-runs/rerun-20261107/final-leaderboard.json"
+OUT = Path(sys.argv[2] if len(sys.argv) > 2 else ROOT / "transcripts")
 OUT.mkdir(exist_ok=True)
-lb = json.loads((RUN / "final-leaderboard.json").read_text())["leaderboard"]
-fix = lambda p: RUN / Path(p).relative_to(".benchmark-runs/rerun-20261107")
+lb = json.loads(Path(BOARD).read_text())["leaderboard"]
+old_lb = json.loads(OLD_BOARD.read_text())["leaderboard"]
+fix = lambda p: ROOT / p  # board paths are repo-relative
 
 
 def load(r, c):
@@ -22,8 +27,8 @@ def load(r, c):
     return sub, jud
 
 
-def find(pred, prefer=()):
-    order = sorted(lb, key=lambda r: (r["display"] not in prefer, -r["overall_100"]))
+def find(pred, prefer=(), board=None):
+    order = sorted(board or lb, key=lambda r: (r["display"] not in prefer, -r["overall_100"]))
     for r in order:
         for c in r["cases"]:
             if c.get("judge_status") != "scored":
@@ -36,10 +41,10 @@ def find(pred, prefer=()):
 
 rb = lambda s: (s.get("grader") or {}).get("rulebook") or {}
 PICKS = [
-    ("rulebook-2003-card", "Rulebook: recites the superseded 2003 card (40/20)",
+    ("rulebook-2003-card", "Rulebook, closed-book run (no chart in prompt, Sol Pro judge): recites the superseded 2003 card (40/20)",
      lambda c, s: c["task"] == "rulebook_vs_body" and rb(s).get("parsed", {}).get("work_rest_min") == "40/20",
-     ("Sonnet 5.5", "Opus 5")),
-    ("rulebook-correct-NL", "Rulebook: one of the 3 answers that got the 2022 card cell right (NL)",
+     ("Sonnet 5.5", "Opus 5"), old_lb),
+    ("rulebook-correct-NL", "Rulebook (chart in prompt): reads the 2022 card cell correctly (NL)",
      lambda c, s: c["task"] == "rulebook_vs_body" and rb(s).get("parsed", {}).get("work_rest_min") == "NL", ()),
     ("keep-pull-false-pull", "Keep/Pull: needless pull of a soldier who stayed below 38.5 C",
      lambda c, s: c["task"] == "keep_going" and (s.get("grader") or {}).get("error_type") == "false_pull",
@@ -56,9 +61,9 @@ PICKS = [
      lambda c, s: c["task"] == "beat_ectemp" and c["components"].get("predictor", 0) > 0.6, ("Muse Wonder 1.0",)),
 ]
 index = ["# Representative transcripts", "",
-         "Real saved cases from the 2026-11-07 run, one file each: prompt, raw model answer, "
-         "deterministic grade and judge marks. Full raw outputs for every case are in "
-         "`results/rerun-20261107/`. Regenerate with `python scripts/extract_transcripts.py`.", "",
+         "Real saved cases from the published board, one file each: prompt, raw model answer, "
+         "deterministic grade and judge marks (GLM-5.3 Prime, except the closed-book 2003-card example). "
+         "Each file names its source under `results/`. Regenerate with `python scripts/extract_transcripts.py`.", "",
          "| File | What it shows | Model | Case |", "|---|---|---|---|"]
 def render(title, r, c, sub, jud):
     prompt = (sub.get("materials") or {}).get("prompt")
@@ -76,8 +81,8 @@ def render(title, r, c, sub, jud):
     return "\n".join(body)
 
 
-for slug, title, pred, prefer in PICKS:
-    r, c, sub, jud = find(pred, prefer)
+for slug, title, pred, prefer, *board in PICKS:
+    r, c, sub, jud = find(pred, prefer, *board)
     (OUT / f"{slug}.md").write_text(render(title, r, c, sub, jud))
     index.append(f"| [{slug}.md]({slug}.md) | {title} | {r['display']} | `{c['case_id']}` |")
     print("wrote", slug, r["display"], c["case_id"])

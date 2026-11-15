@@ -171,7 +171,10 @@ class TestPublicFiles(unittest.TestCase):
                            "Table 1", "Table 2", "FOLLOW", "OVERRIDE", "38.5 C", "15 minutes",
                            "Core temperature is NOT measured", "ride minute", evaluator.render_table(task["rows"])):
                 self.assertIn(needle, p)
-            self.assertNotIn("Reference, TB MED 507", p, "default prompt is closed-book")
+            self.assertIn("Reference, TB MED 507", p, "shipped prompt is open-book")
+            self.assertIn("NL: no limit", p)
+            self.assertEqual(p, evaluator.render_prompt(task, TABLE, include_table=True))
+            self.assertEqual(p, (ROOT / "tasks" / "rulebook_vs_body" / "prompts" / f"{task['task_id']}.md").read_text())
 
     def test_open_book_prompt_includes_tables(self):
         p = evaluator.render_prompt(TASKS["RB-01"], TABLE, include_table=True)
@@ -383,11 +386,11 @@ class TestCLI(unittest.TestCase):
     CMD = [sys.executable, "-m", "tasks.rulebook_vs_body.evaluator"]
 
     def test_print_prompt(self):
-        out = subprocess.run(self.CMD + ["--print-prompt", "RB-02"], capture_output=True, text=True, cwd=ROOT)
+        out = subprocess.run(self.CMD + ["--print-prompt", "RB-02", "--with-table"], capture_output=True, text=True, cwd=ROOT)
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(out.stdout.strip(), TASKS["RB-02"]["prompt"].strip())
-        out = subprocess.run(self.CMD + ["--print-prompt", "RB-01", "--with-table"], capture_output=True, text=True, cwd=ROOT)
-        self.assertIn("Reference, TB MED 507", out.stdout)
+        out = subprocess.run(self.CMD + ["--print-prompt", "RB-01"], capture_output=True, text=True, cwd=ROOT)
+        self.assertNotIn("Reference, TB MED 507", out.stdout)
         out = subprocess.run(self.CMD + ["--print-prompt", "RB-99"], capture_output=True, text=True, cwd=ROOT)
         self.assertNotEqual(out.returncode, 0)
 
